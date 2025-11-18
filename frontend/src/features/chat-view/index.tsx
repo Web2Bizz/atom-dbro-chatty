@@ -12,12 +12,16 @@ const ChatViewFeature = () => {
   useEffect(() => {
     if (!params.id) return
 
-    setChatData(ChatApi.getById(Number.parseInt(params.id)))
+    setChatData(
+      ChatApi.getById(Number.parseInt(params.id)),
+    )
   }, [params.id])
 
   return (
     <div className='chat-view-feature'>
-      <div className='chat-view-feature__header'>{chatData?.name}</div>
+      <div className='chat-view-feature__header'>
+        {chatData?.name}
+      </div>
       <div className='chat-view-feature__main'></div>
       <div className='chat-view-feature__form'>
         <form>

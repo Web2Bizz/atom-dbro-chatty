@@ -8,7 +8,8 @@ type TThemeWrapper = {
 const ThemeWrapper = (props: TThemeWrapper) => {
   const { children } = props
 
-  const [theme, setTheme] = useState<TThemeContext>('default')
+  const [theme, setTheme] =
+    useState<TThemeContext>('default')
 
   const themeValues = {
     theme: theme,
@@ -17,7 +18,9 @@ const ThemeWrapper = (props: TThemeWrapper) => {
 
   return (
     <ThemeContext.Provider value={themeValues}>
-      <div className={`theme-${theme}`}>{children}</div>
+      <div className={`theme-${theme}`}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   )
 }

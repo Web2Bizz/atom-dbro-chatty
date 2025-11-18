@@ -12,12 +12,21 @@ const ChatList = () => {
         <li
           key={key}
           className='chat-list__item'
-          onClick={() => navigate(`/chat/${item.id}`)}
+          onClick={() =>
+            navigate(`/chat/${item.id}`)
+          }
         >
-          <img src='' className='chat-list__item-image' />
+          <img
+            src=''
+            className='chat-list__item-image'
+          />
           <div className='chat-list__item-info'>
-            <span className='chat-list__item-title'>{item.name}</span>
-            <span className='chat-list__item-isers'>{item.users}</span>
+            <span className='chat-list__item-title'>
+              {item.name}
+            </span>
+            <span className='chat-list__item-isers'>
+              {item.users}
+            </span>
           </div>
         </li>
       ))}
