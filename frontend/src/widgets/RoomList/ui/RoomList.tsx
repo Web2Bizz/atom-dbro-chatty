@@ -7,13 +7,18 @@ interface RoomListProps {
   selectedRoomId?: string
 }
 
-export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
+export const RoomList = ({
+  onSelectRoom,
+  selectedRoomId,
+}: RoomListProps) => {
   const [rooms, setRooms] = useState<Room[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showCreateForm, setShowCreateForm] =
+    useState(false)
   const [roomName, setRoomName] = useState('')
-  const [roomDescription, setRoomDescription] = useState('')
+  const [roomDescription, setRoomDescription] =
+    useState('')
 
   useEffect(() => {
     loadRooms()
@@ -33,7 +38,9 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
     }
   }
 
-  const handleCreateRoom = async (e: React.FormEvent) => {
+  const handleCreateRoom = async (
+    e: React.FormEvent,
+  ) => {
     e.preventDefault()
     try {
       const newRoom = await roomsApi.create({
@@ -49,7 +56,10 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
       // handleSelectRoom автоматически обновит URL и загрузит комнату
       onSelectRoom(newRoom)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Ошибка создания комнаты')
+      setError(
+        err.response?.data?.message ||
+          'Ошибка создания комнаты',
+      )
     }
   }
 
@@ -58,7 +68,9 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
       <div style={styles.header}>
         <h3 style={styles.title}>Комнаты</h3>
         <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
+          onClick={() =>
+            setShowCreateForm(!showCreateForm)
+          }
           style={styles.createButton}
         >
           {showCreateForm ? 'Отмена' : '+'}
@@ -66,35 +78,51 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
       </div>
 
       {showCreateForm && (
-        <form onSubmit={handleCreateRoom} style={styles.createForm}>
+        <form
+          onSubmit={handleCreateRoom}
+          style={styles.createForm}
+        >
           <input
             type='text'
             value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
+            onChange={(e) =>
+              setRoomName(e.target.value)
+            }
             placeholder='Название комнаты'
             required
             style={styles.input}
           />
           <textarea
             value={roomDescription}
-            onChange={(e) => setRoomDescription(e.target.value)}
+            onChange={(e) =>
+              setRoomDescription(e.target.value)
+            }
             placeholder='Описание (необязательно)'
             style={styles.textarea}
           />
-          <button type='submit' style={styles.submitButton}>
+          <button
+            type='submit'
+            style={styles.submitButton}
+          >
             Создать
           </button>
         </form>
       )}
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && (
+        <div style={styles.error}>{error}</div>
+      )}
 
       {isLoading ? (
-        <div style={styles.loading}>Загрузка...</div>
+        <div style={styles.loading}>
+          Загрузка...
+        </div>
       ) : (
         <div style={styles.list}>
           {rooms.length === 0 ? (
-            <div style={styles.empty}>Нет доступных комнат</div>
+            <div style={styles.empty}>
+              Нет доступных комнат
+            </div>
           ) : (
             rooms.map((room) => (
               <div
@@ -102,12 +130,20 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
                 onClick={() => onSelectRoom(room)}
                 style={{
                   ...styles.roomItem,
-                  ...(selectedRoomId === room.id ? styles.selectedRoom : {}),
+                  ...(selectedRoomId === room.id
+                    ? styles.selectedRoom
+                    : {}),
                 }}
               >
-                <div style={styles.roomName}>{room.name}</div>
+                <div style={styles.roomName}>
+                  {room.name}
+                </div>
                 {room.description && (
-                  <div style={styles.roomDescription}>{room.description}</div>
+                  <div
+                    style={styles.roomDescription}
+                  >
+                    {room.description}
+                  </div>
                 )}
               </div>
             ))
@@ -118,7 +154,9 @@ export const RoomList = ({ onSelectRoom, selectedRoomId }: RoomListProps) => {
   )
 }
 
-const styles: { [key: string]: React.CSSProperties } = {
+const styles: {
+  [key: string]: React.CSSProperties
+} = {
   container: {
     width: '300px',
     backgroundColor: '#f8f9fa',

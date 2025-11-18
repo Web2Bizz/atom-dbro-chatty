@@ -1,5 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { useContext, useState, useEffect } from 'react'
+import {
+  useContext,
+  useState,
+  useEffect,
+} from 'react'
 import {
   SocketContext,
   type TSocketContext,
@@ -14,9 +18,12 @@ import './style.css'
  * TODO: move this in separate component: Statusbar
  * */
 const StatusBar = () => {
-  const socket = useContext<TSocketContext>(SocketContext)
+  const socket = useContext<TSocketContext>(
+    SocketContext,
+  )
 
-  const [className, setClassName] = useState<string>('status-wait')
+  const [className, setClassName] =
+    useState<string>('status-wait')
 
   useEffect(() => {
     switch (socket.status) {
@@ -38,23 +45,32 @@ const StatusBar = () => {
 const Header = () => {
   const navigate = useNavigate()
 
-  const burgerContext = useContext<TBurgerContext>(BurgerContext)
+  const burgerContext =
+    useContext<TBurgerContext>(BurgerContext)
 
   const menuAttributes = {
     onClick: () => {
       if (!burgerContext) return
 
-      burgerContext.setIsOpen(!burgerContext.isOpen)
+      burgerContext.setIsOpen(
+        !burgerContext.isOpen,
+      )
     },
     className: 'burger-button',
   }
 
   return (
     <header>
-      <button {...menuAttributes} className='burger-button'>
+      <button
+        {...menuAttributes}
+        className='burger-button'
+      >
         <FontAwesomeIcon icon='fa-solid fa-bars' />
       </button>
-      <span className='logo' onClick={() => navigate('/')}>
+      <span
+        className='logo'
+        onClick={() => navigate('/')}
+      >
         chat-x
       </span>
       <StatusBar />

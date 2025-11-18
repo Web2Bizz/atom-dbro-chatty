@@ -8,7 +8,9 @@ export type TContainerProps = {
 const Container = (props: TContainerProps) => {
   const { children } = props
 
-  return <div className='container'>{children}</div>
+  return (
+    <div className='container'>{children}</div>
+  )
 }
 
 export default Container

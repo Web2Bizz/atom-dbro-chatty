@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const CreateRoomSchema = z
   .object({
     name: z.string().min(1).max(255).describe('Название комнаты'),
     description: z.string().max(1000).optional().describe('Описание комнаты'),
   })
-  .describe('Данные для создания комнаты');
+  .describe('Данные для создания комнаты')
 
 export const RoomResponseSchema = z
   .object({
@@ -17,9 +17,11 @@ export const RoomResponseSchema = z
     updatedAt: z.string().datetime().describe('Дата обновления комнаты'),
     isActive: z.boolean().describe('Активна ли комната'),
   })
-  .describe('Информация о комнате');
+  .describe('Информация о комнате')
 
-export const RoomListResponseSchema = z.array(RoomResponseSchema).describe('Список комнат');
+export const RoomListResponseSchema = z
+  .array(RoomResponseSchema)
+  .describe('Список комнат')
 
 export const RoomMemberSchema = z
   .object({
@@ -28,16 +30,16 @@ export const RoomMemberSchema = z
     status: z.enum(['ACTIVE', 'BAN']).describe('Статус участника'),
     joined_in: z.string().datetime().describe('Дата присоединения'),
   })
-  .describe('Участник комнаты');
+  .describe('Участник комнаты')
 
 export const JoinRoomResponseSchema = RoomMemberSchema.describe(
   'Результат присоединения к комнате',
-);
+)
 
 export const RoomWithMembersSchema = RoomResponseSchema.extend({
   members: z.array(RoomMemberSchema).optional().describe('Список участников'),
-}).describe('Комната с участниками');
+}).describe('Комната с участниками')
 
 export const UserRoomsResponseSchema = z
   .array(RoomResponseSchema)
-  .describe('Список комнат пользователя');
+  .describe('Список комнат пользователя')

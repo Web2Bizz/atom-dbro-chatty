@@ -13,7 +13,9 @@ const ChatView = () => {
               className='chat-view__message'
               placeholder='your message here'
             ></textarea>
-            <button className='chat-view__submit'>send</button>
+            <button className='chat-view__submit'>
+              send
+            </button>
           </form>
         </div>
       </div>

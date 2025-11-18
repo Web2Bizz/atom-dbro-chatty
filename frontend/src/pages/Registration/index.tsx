@@ -10,9 +10,12 @@ type TRegistrationForm = {
 }
 
 const Registration = () => {
-  const { reset, handleSubmit, register } = useForm<TRegistrationForm>()
+  const { reset, handleSubmit, register } =
+    useForm<TRegistrationForm>()
 
-  const onFormSubmit = (data: TRegistrationForm) => {
+  const onFormSubmit = (
+    data: TRegistrationForm,
+  ) => {
     console.log(data)
 
     reset()
@@ -32,7 +35,10 @@ const Registration = () => {
           title='Your nickname'
           message='crazy nick here'
         />
-        <Inputfield input={{ ...register('password') }} title='Password' />
+        <Inputfield
+          input={{ ...register('password') }}
+          title='Password'
+        />
         <Inputfield
           input={{
             ...register('confirmPassword'),

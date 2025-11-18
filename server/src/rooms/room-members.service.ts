@@ -4,11 +4,11 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
-} from '@nestjs/common';
-import { eq, and, or } from 'drizzle-orm';
-import { DATABASE_CONNECTION } from '../database/database.module';
-import { roomMembers, rooms, users } from '../database/schema';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+} from '@nestjs/common'
+import { eq, and, or } from 'drizzle-orm'
+import { DATABASE_CONNECTION } from '../database/database.module'
+import { roomMembers, rooms, users } from '../database/schema'
+import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 
 @Injectable()
 export class RoomMembersService {
@@ -19,17 +19,23 @@ export class RoomMembersService {
 
   async joinRoom(roomId: string, userId: string) {
     // Check if room exists
-    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1)
     if (!room) {
-      throw new NotFoundException('Room not found');
+      throw new NotFoundException('Room not found')
     }
 
     // Check if user is already a member
     const [existingMember] = await this.db
       .select()
       .from(roomMembers)
-      .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)))
-      .limit(1);
+      .where(
+        and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+      )
+      .limit(1)
 
     if (existingMember) {
       // If banned, update to ACTIVE; otherwise return existing member
@@ -38,10 +44,10 @@ export class RoomMembersService {
           .update(roomMembers)
           .set({ status: 'ACTIVE', joinedIn: new Date() })
           .where(eq(roomMembers.id, existingMember.id))
-          .returning();
-        return updated;
+          .returning()
+        return updated
       }
-      return existingMember;
+      return existingMember
     }
 
     // Add user as member with ACTIVE status
@@ -53,54 +59,66 @@ export class RoomMembersService {
         status: 'ACTIVE',
         joinedIn: new Date(),
       })
-      .returning();
+      .returning()
 
-    return member;
+    return member
   }
 
   async leaveRoom(roomId: string, userId: string) {
     // Check if room exists
-    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1)
     if (!room) {
-      throw new NotFoundException('Room not found');
+      throw new NotFoundException('Room not found')
     }
 
     // Remove user from members (can leave even if banned)
     const [deleted] = await this.db
       .delete(roomMembers)
-      .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)))
-      .returning();
+      .where(
+        and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+      )
+      .returning()
 
     if (!deleted) {
-      throw new NotFoundException('User is not a member of this room');
+      throw new NotFoundException('User is not a member of this room')
     }
 
-    return deleted;
+    return deleted
   }
 
   async banUser(roomId: string, userId: string, bannedBy: string) {
     // Check if room exists
-    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1)
     if (!room) {
-      throw new NotFoundException('Room not found');
+      throw new NotFoundException('Room not found')
     }
 
     // Check if bannedBy is the owner
     if (room.ownerId !== bannedBy) {
-      throw new ForbiddenException('Only room owner can ban users');
+      throw new ForbiddenException('Only room owner can ban users')
     }
 
     // Check if trying to ban owner
     if (userId === room.ownerId) {
-      throw new ConflictException('Cannot ban room owner');
+      throw new ConflictException('Cannot ban room owner')
     }
 
     // Check if user is a member
     const [existingMember] = await this.db
       .select()
       .from(roomMembers)
-      .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)))
-      .limit(1);
+      .where(
+        and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+      )
+      .limit(1)
 
     if (!existingMember) {
       // If not a member, add as member with BAN status
@@ -112,8 +130,8 @@ export class RoomMembersService {
           status: 'BAN',
           joinedIn: new Date(),
         })
-        .returning();
-      return member;
+        .returning()
+      return member
     }
 
     // Update status to BAN
@@ -121,36 +139,42 @@ export class RoomMembersService {
       .update(roomMembers)
       .set({ status: 'BAN' })
       .where(eq(roomMembers.id, existingMember.id))
-      .returning();
+      .returning()
 
-    return updated;
+    return updated
   }
 
   async unbanUser(roomId: string, userId: string, unbannedBy: string) {
     // Check if room exists
-    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1)
     if (!room) {
-      throw new NotFoundException('Room not found');
+      throw new NotFoundException('Room not found')
     }
 
     // Check if unbannedBy is the owner
     if (room.ownerId !== unbannedBy) {
-      throw new ForbiddenException('Only room owner can unban users');
+      throw new ForbiddenException('Only room owner can unban users')
     }
 
     // Check if user is a member
     const [existingMember] = await this.db
       .select()
       .from(roomMembers)
-      .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)))
-      .limit(1);
+      .where(
+        and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+      )
+      .limit(1)
 
     if (!existingMember) {
-      throw new NotFoundException('User is not a member of this room');
+      throw new NotFoundException('User is not a member of this room')
     }
 
     if (existingMember.status !== 'BAN') {
-      throw new ConflictException('User is not banned');
+      throw new ConflictException('User is not banned')
     }
 
     // Update status to ACTIVE
@@ -158,31 +182,40 @@ export class RoomMembersService {
       .update(roomMembers)
       .set({ status: 'ACTIVE' })
       .where(eq(roomMembers.id, existingMember.id))
-      .returning();
+      .returning()
 
-    return updated;
+    return updated
   }
 
-  async getMemberStatus(roomId: string, userId: string): Promise<'ACTIVE' | 'BAN' | null> {
+  async getMemberStatus(
+    roomId: string,
+    userId: string,
+  ): Promise<'ACTIVE' | 'BAN' | null> {
     const [member] = await this.db
       .select()
       .from(roomMembers)
-      .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)))
-      .limit(1);
+      .where(
+        and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+      )
+      .limit(1)
 
-    return member?.status || null;
+    return member?.status || null
   }
 
   async canSendMessage(roomId: string, userId: string): Promise<boolean> {
-    const status = await this.getMemberStatus(roomId, userId);
-    return status === 'ACTIVE';
+    const status = await this.getMemberStatus(roomId, userId)
+    return status === 'ACTIVE'
   }
 
   async getRoomMembers(roomId: string) {
     // Check if room exists
-    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1)
     if (!room) {
-      throw new NotFoundException('Room not found');
+      throw new NotFoundException('Room not found')
     }
 
     return this.db
@@ -193,7 +226,7 @@ export class RoomMembersService {
         joined_in: roomMembers.joinedIn,
       })
       .from(roomMembers)
-      .where(eq(roomMembers.roomId, roomId));
+      .where(eq(roomMembers.roomId, roomId))
   }
 
   async getUserRooms(userId: string) {
@@ -209,7 +242,7 @@ export class RoomMembersService {
         isActive: rooms.isActive,
       })
       .from(rooms)
-      .where(and(eq(rooms.ownerId, userId), eq(rooms.isActive, true)));
+      .where(and(eq(rooms.ownerId, userId), eq(rooms.isActive, true)))
 
     const memberRooms = await this.db
       .select({
@@ -223,14 +256,14 @@ export class RoomMembersService {
       })
       .from(rooms)
       .innerJoin(roomMembers, eq(rooms.id, roomMembers.roomId))
-      .where(and(eq(roomMembers.userId, userId), eq(rooms.isActive, true)));
+      .where(and(eq(roomMembers.userId, userId), eq(rooms.isActive, true)))
 
     // Combine and deduplicate (user might be both owner and member)
-    const roomMap = new Map();
-    [...ownedRooms, ...memberRooms].forEach((room) => {
-      roomMap.set(room.id, room);
-    });
+    const roomMap = new Map()
+    ;[...ownedRooms, ...memberRooms].forEach((room) => {
+      roomMap.set(room.id, room)
+    })
 
-    return Array.from(roomMap.values());
+    return Array.from(roomMap.values())
   }
 }

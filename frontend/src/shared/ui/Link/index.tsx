@@ -12,7 +12,10 @@ const Link = (props: TLinkProps) => {
   const { label, to, type } = props
 
   return type !== 'react' ? (
-    <span className='link' onClick={() => navigate(to)}>
+    <span
+      className='link'
+      onClick={() => navigate(to)}
+    >
       {label}
     </span>
   ) : (

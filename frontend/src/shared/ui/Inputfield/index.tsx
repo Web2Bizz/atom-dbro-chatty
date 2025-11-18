@@ -17,8 +17,13 @@ const Inputfield = (props: TInputfieldProps) => {
   return (
     <div className='inputfield'>
       <p className='inputfield__title'>{title}</p>
-      <input className='inputfield__input' {...input} />
-      <span className='inputfield__message'>{message}</span>
+      <input
+        className='inputfield__input'
+        {...input}
+      />
+      <span className='inputfield__message'>
+        {message}
+      </span>
     </div>
   )
 }

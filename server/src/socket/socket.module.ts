@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
-import { SocketGateway } from './socket.gateway';
-import { ConfigModule } from '../config/config.module';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigService } from '../config/config.service';
-import { RoomsModule } from '../rooms/rooms.module';
+import { Module } from '@nestjs/common'
+import { SocketGateway } from './socket.gateway'
+import { ConfigModule } from '../config/config.module'
+import { JwtModule } from '@nestjs/jwt'
+import { ConfigService } from '../config/config.service'
+import { RoomsModule } from '../rooms/rooms.module'
 
 @Module({
   imports: [

@@ -10,11 +10,20 @@ const Main = () => {
       <h1>Hello and welcome!</h1>
       <h2>Let's try Chat-X</h2>
       <p>
-        developed by <a href='https://github.com/letnull19a'>@letnull19a</a>
+        developed by{' '}
+        <a href='https://github.com/letnull19a'>
+          @letnull19a
+        </a>
       </p>
       <div>
-        <button onClick={() => navigate('/reg')}>Registration</button>
-        <button onClick={() => navigate('/login')}>Login now!</button>
+        <button onClick={() => navigate('/reg')}>
+          Registration
+        </button>
+        <button
+          onClick={() => navigate('/login')}
+        >
+          Login now!
+        </button>
       </div>
     </>
   )
