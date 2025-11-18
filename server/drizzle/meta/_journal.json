@@ -1,0 +1,48 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1763487447020,
+      "tag": "0000_red_wendell_rand",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1763488184440,
+      "tag": "0001_lovely_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1763496136633,
+      "tag": "0002_next_black_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1763500582014,
+      "tag": "0003_heavy_marvel_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1763503077032,
+      "tag": "0004_freezing_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1763507910944,
+      "tag": "0005_icy_hairball",
+      "breakpoints": true
+    }
+  ]
+}
