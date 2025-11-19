@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UsePipes,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -43,10 +34,7 @@ export class UsersController {
 
   @Patch(':id')
   @UsePipes(new ZodValidationPipe(UpdateUserSchema))
-  async update(
-    @Param('id') id: string,
-    @Body() updateUserDto: z.infer<typeof UpdateUserSchema>,
-  ) {
+  async update(@Param('id') id: string, @Body() updateUserDto: z.infer<typeof UpdateUserSchema>) {
     return this.usersService.update(id, updateUserDto);
   }
 
@@ -56,4 +44,3 @@ export class UsersController {
     return { message: 'User deleted successfully' };
   }
 }
-

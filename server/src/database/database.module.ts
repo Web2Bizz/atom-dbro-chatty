@@ -29,4 +29,3 @@ export type Database = PostgresJsDatabase<typeof schema>;
   exports: [DATABASE_CONNECTION],
 })
 export class DatabaseModule {}
-

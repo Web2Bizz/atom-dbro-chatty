@@ -17,7 +17,7 @@ export class AuthService {
   async generateApiKey(name?: string, userId?: string, expiresInDays?: number): Promise<ApiKey> {
     // Генерируем случайный ключ
     const key = `sk_${randomBytes(32).toString('hex')}`;
-    
+
     const expiresAt = expiresInDays
       ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
       : null;
@@ -43,12 +43,7 @@ export class AuthService {
     const [apiKey] = await this.db
       .select()
       .from(apiKeys)
-      .where(
-        and(
-          eq(apiKeys.key, key),
-          eq(apiKeys.isActive, true),
-        ),
-      )
+      .where(and(eq(apiKeys.key, key), eq(apiKeys.isActive, true)))
       .limit(1);
 
     if (!apiKey) {
@@ -61,10 +56,7 @@ export class AuthService {
     }
 
     // Обновляем время последнего использования
-    await this.db
-      .update(apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(apiKeys.id, apiKey.id));
+    await this.db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, apiKey.id));
 
     return apiKey;
   }
@@ -73,10 +65,7 @@ export class AuthService {
    * Получает все API ключи пользователя
    */
   async getUserApiKeys(userId: string): Promise<ApiKey[]> {
-    return this.db
-      .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.userId, userId));
+    return this.db.select().from(apiKeys).where(eq(apiKeys.userId, userId));
   }
 
   /**
@@ -98,14 +87,10 @@ export class AuthService {
    * Удаляет API ключ
    */
   async deleteApiKey(keyId: string): Promise<void> {
-    const [deletedKey] = await this.db
-      .delete(apiKeys)
-      .where(eq(apiKeys.id, keyId))
-      .returning();
+    const [deletedKey] = await this.db.delete(apiKeys).where(eq(apiKeys.id, keyId)).returning();
 
     if (!deletedKey) {
       throw new NotFoundException(`API key with ID ${keyId} not found`);
     }
   }
 }
-

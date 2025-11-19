@@ -20,11 +20,7 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<User> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, id))
-      .limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -34,11 +30,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const [user] = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
 
     return user || null;
   }
@@ -58,14 +50,10 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<void> {
-    const [deletedUser] = await this.db
-      .delete(users)
-      .where(eq(users.id, id))
-      .returning();
-    
+    const [deletedUser] = await this.db.delete(users).where(eq(users.id, id)).returning();
+
     if (!deletedUser) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
   }
 }
-

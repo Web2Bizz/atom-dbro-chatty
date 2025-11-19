@@ -34,7 +34,7 @@ export class AuthController {
       data.userId,
       data.expiresInDays,
     );
-    
+
     // Возвращаем ключ только при создании
     return {
       id: apiKey.id,
@@ -71,4 +71,3 @@ export class AuthController {
     await this.authService.deleteApiKey(id);
   }
 }
-

@@ -38,10 +38,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('message')
-  handleMessage(
-    @MessageBody() data: unknown,
-    @ConnectedSocket() client: Socket,
-  ) {
+  handleMessage(@MessageBody() data: unknown, @ConnectedSocket() client: Socket) {
     try {
       const parsed = MessageSchema.parse(data);
       this.logger.log(`Message received from ${client.id}: ${parsed.content}`);
@@ -67,10 +64,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('join-room')
-  handleJoinRoom(
-    @MessageBody() data: { room: string },
-    @ConnectedSocket() client: Socket,
-  ) {
+  handleJoinRoom(@MessageBody() data: { room: string }, @ConnectedSocket() client: Socket) {
     const roomSchema = z.object({ room: z.string() });
     try {
       const parsed = roomSchema.parse(data);
@@ -84,10 +78,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('leave-room')
-  handleLeaveRoom(
-    @MessageBody() data: { room: string },
-    @ConnectedSocket() client: Socket,
-  ) {
+  handleLeaveRoom(@MessageBody() data: { room: string }, @ConnectedSocket() client: Socket) {
     const roomSchema = z.object({ room: z.string() });
     try {
       const parsed = roomSchema.parse(data);
@@ -100,4 +91,3 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 }
-

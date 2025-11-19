@@ -28,11 +28,7 @@ export class RoomsService {
   }
 
   async findOne(id: string): Promise<Room> {
-    const [room] = await this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.id, id))
-      .limit(1);
+    const [room] = await this.db.select().from(rooms).where(eq(rooms.id, id)).limit(1);
 
     if (!room) {
       throw new NotFoundException(`Room with ID ${id} not found`);
@@ -41,4 +37,3 @@ export class RoomsService {
     return room;
   }
 }
-

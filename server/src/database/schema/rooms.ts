@@ -12,4 +12,3 @@ export const rooms = pgTable('rooms', {
 
 export type Room = typeof rooms.$inferSelect;
 export type NewRoom = typeof rooms.$inferInsert;
-

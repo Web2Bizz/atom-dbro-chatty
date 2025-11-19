@@ -13,4 +13,3 @@ export const apiKeys = pgTable('api_keys', {
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
-

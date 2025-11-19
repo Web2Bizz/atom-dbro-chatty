@@ -24,4 +24,3 @@ import { RoomsModule } from '../rooms/rooms.module';
   providers: [AppService],
 })
 export class AppModule {}
-

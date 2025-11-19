@@ -6,4 +6,3 @@ import { SocketGateway } from './socket.gateway';
   exports: [SocketGateway],
 })
 export class SocketModule {}
-

@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UsePipes,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UsePipes, HttpCode, HttpStatus } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -27,10 +18,7 @@ export class RoomsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ZodValidationPipe(CreateRoomSchema))
-  async create(
-    @Body() body: z.infer<typeof CreateRoomSchema>,
-    @GetApiKey() apiKey?: ApiKey,
-  ) {
+  async create(@Body() body: z.infer<typeof CreateRoomSchema>, @GetApiKey() apiKey?: ApiKey) {
     return this.roomsService.create({
       name: body.name,
       description: body.description ?? null,
@@ -49,4 +37,3 @@ export class RoomsController {
     return this.roomsService.findOne(id);
   }
 }
-

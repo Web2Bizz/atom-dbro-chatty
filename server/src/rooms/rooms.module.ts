@@ -8,4 +8,3 @@ import { RoomsController } from './rooms.controller';
   exports: [RoomsService],
 })
 export class RoomsModule {}
-
