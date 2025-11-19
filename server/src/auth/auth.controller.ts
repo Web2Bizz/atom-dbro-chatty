@@ -41,10 +41,54 @@ const GenerateApiKeySchema = z.object({
   scopes: z.array(z.string()).optional(),
 });
 
+const RegisterSchema = z.object({
+  username: z.string().min(3).max(100),
+  password: z.string().min(6),
+});
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  // ========== Registration ==========
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['username', 'password'],
+      properties: {
+        username: { type: 'string', minLength: 3, maxLength: 100, description: 'Username (must be unique)' },
+        password: { type: 'string', minLength: 6, description: 'User password' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        username: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 409, description: 'Username already exists' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @UsePipes(new ZodValidationPipe(RegisterSchema))
+  async register(@Body() data: z.infer<typeof RegisterSchema>) {
+    const user = await this.authService.register(data.username, data.password);
+
+    return {
+      id: user.id,
+      username: user.username,
+    };
+  }
 
   // ========== JWT Authentication ==========
 

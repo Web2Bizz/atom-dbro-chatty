@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   UnauthorizedException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -145,6 +146,54 @@ export class AuthService {
       .set({ isRevoked: true })
       .where(eq(refreshTokens.token, refreshToken));
     this.logger.log('Refresh token revoked');
+  }
+
+  /**
+   * Регистрация нового пользователя
+   */
+  async register(username: string, password: string): Promise<User> {
+    // Проверяем, существует ли пользователь с таким username
+    const [existingUser] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    if (existingUser) {
+      this.logger.warn(`Registration attempt with existing username: ${username}`);
+      throw new ConflictException('Username already exists');
+    }
+
+    // Генерируем email из username для совместимости с существующей схемой
+    let email = `${username}@chatty.local`;
+
+    // Проверяем, существует ли пользователь с таким email (на случай, если кто-то уже зарегистрировался с таким email)
+    const [existingEmail] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingEmail) {
+      // Если email уже существует, добавляем случайный суффикс
+      email = `${username}_${Date.now()}@chatty.local`;
+    }
+
+    // Хешируем пароль
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Создаем пользователя
+    const [user] = await this.db
+      .insert(users)
+      .values({
+        username,
+        email,
+        password: hashedPassword,
+      })
+      .returning();
+
+    this.logger.log(`User registered: ${username} (${user.id})`);
+    return user;
   }
 
   /**
