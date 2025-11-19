@@ -1,14 +1,12 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
-import { AppService } from './app.service'
-import { UserController } from './../user/user.controller'
-import { GroupsController } from './../groups/groups.controller'
-import { UserModule } from './../user/user.module'
-import { DatabaseModule } from './../database/database.module'
-import { AuthController } from './../auth/auth.controller'
-import { AuthModule } from './../auth/auth.module'
-import { ChatGateway } from './../chat/chat.gateway'
-import { LoggerModule } from 'nestjs-pino'
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from '../database/database.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { SocketModule } from '../socket/socket.module';
+import { UsersModule } from '../users/users.module';
+import { AuthModule } from '../auth/auth.module';
+import { RoomsModule } from '../rooms/rooms.module';
 
 @Module({
   imports: [
@@ -17,11 +15,13 @@ import { LoggerModule } from 'nestjs-pino'
       envFilePath: '.env',
     }),
     DatabaseModule,
-    UserModule,
+    SocketModule,
+    UsersModule,
     AuthModule,
-    LoggerModule.forRoot(),
+    RoomsModule,
   ],
-  controllers: [UserController, GroupsController, AuthController],
-  providers: [AppService, ChatGateway],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
+

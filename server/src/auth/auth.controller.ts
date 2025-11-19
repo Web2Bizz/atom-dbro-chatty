@@ -1,76 +1,74 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
   Post,
-  Request,
-} from '@nestjs/common'
-import { AuthResponse, AuthService } from './auth.service'
-import { Public } from './decorators/public.decorator'
-import { LoginDto } from './dto/login.dto'
-import { ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger'
+  Get,
+  Delete,
+  Body,
+  Param,
+  UsePipes,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { Public } from './decorators/public.decorator';
+
+const GenerateApiKeySchema = z.object({
+  name: z.string().optional(),
+  userId: z.string().uuid().optional(),
+  expiresInDays: z.number().int().positive().optional(),
+});
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
   @Public()
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({
-    status: 400,
-  })
-  @HttpCode(200)
-  async signIn(@Body() loginDto: LoginDto): Promise<AuthResponse> {
-    return await this.authService.signIn(loginDto)
+  @Post('api-keys')
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(new ZodValidationPipe(GenerateApiKeySchema))
+  async generateApiKey(@Body() data: z.infer<typeof GenerateApiKeySchema>) {
+    const apiKey = await this.authService.generateApiKey(
+      data.name,
+      data.userId,
+      data.expiresInDays,
+    );
+    
+    // Возвращаем ключ только при создании
+    return {
+      id: apiKey.id,
+      key: apiKey.key,
+      name: apiKey.name,
+      createdAt: apiKey.createdAt,
+      expiresAt: apiKey.expiresAt,
+    };
   }
 
-  @Get('sessions/:userId')
-  @Public()
-  @ApiParam({
-    name: 'userId',
-  })
-  async getAllUserSessions(
-    @Param('userId')
-    userId: string,
-  ) {
-    return await this.authService.getSessionsByUserId(userId)
+  @Get('api-keys/:userId')
+  async getUserApiKeys(@Param('userId') userId: string) {
+    const keys = await this.authService.getUserApiKeys(userId);
+    // Не возвращаем сами ключи, только метаданные
+    return keys.map((key) => ({
+      id: key.id,
+      name: key.name,
+      lastUsedAt: key.lastUsedAt,
+      createdAt: key.createdAt,
+      expiresAt: key.expiresAt,
+      isActive: key.isActive,
+    }));
   }
 
-  @Delete('sessions/:userId')
-  @Public()
-  @ApiParam({
-    name: 'userId',
-  })
-  async closeAllUserSessions(
-    @Param('userId')
-    userId: string,
-  ) {
-    return await this.authService.closeAllSessions(userId)
+  @Delete('api-keys/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async revokeApiKey(@Param('id') id: string) {
+    await this.authService.revokeApiKey(id);
   }
 
-  @Delete('sessions/:userId/:sessionId')
-  @Public()
-  @ApiParam({
-    name: 'userId',
-  })
-  @ApiParam({
-    name: 'sessionId',
-  })
-  async closeUserSessions(
-    @Param('userId')
-    userId: string,
-    @Param('sessionId')
-    sessionId: string,
-  ) {
-    return await this.authService.closeSession(userId, sessionId)
-  }
-
-  @Get('profile')
-  async getProfile(@Request() req) {
-    return req.user
+  @Delete('api-keys/:id/delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteApiKey(@Param('id') id: string) {
+    await this.authService.deleteApiKey(id);
   }
 }
+

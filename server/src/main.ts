@@ -1,24 +1,40 @@
-import { NestFactory } from '@nestjs/core'
-import { AppModule } from './app/app.module'
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
-import { ZodValidationPipe } from '@anatine/zod-nestjs'
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app/app.module';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { ApiKeyGuard } from './auth/guards/api-key.guard';
+import { AuthService } from './auth/auth.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule);
 
-  app.enableCors()
-  app.useGlobalPipes(new ZodValidationPipe())
+  // Enable CORS for Socket.io and API
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
-  const config = new DocumentBuilder()
-    .setTitle('Chat-X Docs')
-    .setDescription('chat-x documentation')
-    .setVersion('1.0')
-    .addTag('chat-x')
-    .build()
+  // Socket.io adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
-  const documentFactory = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('api', app, documentFactory)
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
-  await app.listen(process.env.PORT ?? 3000)
+  // Global API Key Guard
+  const reflector = app.get(Reflector);
+  const authService = app.get(AuthService);
+  app.useGlobalGuards(new ApiKeyGuard(authService, reflector));
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Application is running on: http://localhost:${port}`);
 }
-bootstrap()
+
+bootstrap();
+

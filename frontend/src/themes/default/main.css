@@ -1,8 +1,0 @@
-.theme-default {
-  --primary-color: #fff;
-  --foreign-color: #ffffcc;
-
-  --header-bc: var(--primary-color);
-  --header-sh: #b4b4b4;
-  --header-logo-c: #3c3c3c;
-}
