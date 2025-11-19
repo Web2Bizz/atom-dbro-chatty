@@ -1,14 +1,9 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common'
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger'
-import { AuthGuard } from '@nestjs/passport'
-import { MessagesService } from './messages.service'
-import { MessageListResponseSchema } from './schemas/messages.schemas'
-import { zodToSwaggerSchema } from '../common/utils/zod-to-swagger.util'
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { MessagesService } from './messages.service';
+import { MessageListResponseSchema } from './schemas/messages.schemas';
+import { zodToSwaggerSchema } from '../common/utils/zod-to-swagger.util';
 
 @ApiTags('messages')
 @Controller('room/:id/messages')
@@ -33,6 +28,6 @@ export class MessagesController {
     description: 'Комната не найдена',
   })
   async findAllByRoomId(@Param('id') roomId: string) {
-    return this.messagesService.findAllByRoomId(roomId)
+    return this.messagesService.findAllByRoomId(roomId);
   }
 }

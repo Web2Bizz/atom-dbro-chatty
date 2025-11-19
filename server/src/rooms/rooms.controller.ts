@@ -10,26 +10,20 @@ import {
   UseGuards,
   Request,
   Version,
-} from '@nestjs/common'
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiBearerAuth,
-} from '@nestjs/swagger'
-import { AuthGuard } from '@nestjs/passport'
-import { RoomsService } from './rooms.service'
-import { RoomMembersService } from './room-members.service'
-import { CreateRoomDto } from './dto/create-room.dto'
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { RoomsService } from './rooms.service';
+import { RoomMembersService } from './room-members.service';
+import { CreateRoomDto } from './dto/create-room.dto';
 import {
   CreateRoomSchema,
   RoomResponseSchema,
   RoomListResponseSchema,
   JoinRoomResponseSchema,
   UserRoomsResponseSchema,
-} from './schemas/rooms.schemas'
-import { zodToSwaggerSchema } from '../common/utils/zod-to-swagger.util'
+} from './schemas/rooms.schemas';
+import { zodToSwaggerSchema } from '../common/utils/zod-to-swagger.util';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -65,13 +59,13 @@ export class RoomsController {
     description: 'Комната с таким именем уже существует',
   })
   async create(@Body() createRoomDto: CreateRoomDto, @Request() req) {
-    const ownerId = req.user.userId
+    const ownerId = req.user.userId;
     const room = await this.roomsService.create(
       createRoomDto.name,
       ownerId,
       createRoomDto.description,
-    )
-    return room
+    );
+    return room;
   }
 
   @Get()
@@ -82,7 +76,7 @@ export class RoomsController {
     schema: zodToSwaggerSchema(RoomListResponseSchema),
   })
   async findAll() {
-    return this.roomsService.findAll()
+    return this.roomsService.findAll();
   }
 
   @Get(':id')
@@ -97,7 +91,7 @@ export class RoomsController {
     description: 'Комната не найдена',
   })
   async findOne(@Param('id') id: string) {
-    return this.roomsService.findById(id)
+    return this.roomsService.findById(id);
   }
 
   @Delete(':id')
@@ -117,7 +111,7 @@ export class RoomsController {
     description: 'Комната уже деактивирована',
   })
   async deactivate(@Param('id') id: string) {
-    return this.roomsService.deactivate(id)
+    return this.roomsService.deactivate(id);
   }
 
   @Post(':id/join')
@@ -139,8 +133,8 @@ export class RoomsController {
     description: 'Комната не найдена',
   })
   async joinRoom(@Param('id') id: string, @Request() req) {
-    const userId = req.user.userId
-    return this.roomMembersService.joinRoom(id, userId)
+    const userId = req.user.userId;
+    return this.roomMembersService.joinRoom(id, userId);
   }
 
   @Post(':id/leave')
@@ -162,17 +156,15 @@ export class RoomsController {
     description: 'Комната не найдена или пользователь не является участником',
   })
   async leaveRoom(@Param('id') id: string, @Request() req) {
-    const userId = req.user.userId
-    return this.roomMembersService.leaveRoom(id, userId)
+    const userId = req.user.userId;
+    return this.roomMembersService.leaveRoom(id, userId);
   }
 
   @Post(':id/ban/:userId')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({
-    summary: 'Забанить пользователя в комнате (только владелец)',
-  })
+  @ApiOperation({ summary: 'Забанить пользователя в комнате (только владелец)' })
   @ApiResponse({
     status: 200,
     description: 'Пользователь успешно забанен',
@@ -194,22 +186,16 @@ export class RoomsController {
     status: 409,
     description: 'Нельзя забанить владельца комнаты',
   })
-  async banUser(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-    @Request() req,
-  ) {
-    const bannedBy = req.user.userId
-    return this.roomMembersService.banUser(id, userId, bannedBy)
+  async banUser(@Param('id') id: string, @Param('userId') userId: string, @Request() req) {
+    const bannedBy = req.user.userId;
+    return this.roomMembersService.banUser(id, userId, bannedBy);
   }
 
   @Post(':id/unban/:userId')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({
-    summary: 'Разбанить пользователя в комнате (только владелец)',
-  })
+  @ApiOperation({ summary: 'Разбанить пользователя в комнате (только владелец)' })
   @ApiResponse({
     status: 200,
     description: 'Пользователь успешно разбанен',
@@ -231,22 +217,16 @@ export class RoomsController {
     status: 409,
     description: 'Пользователь не забанен',
   })
-  async unbanUser(
-    @Param('id') id: string,
-    @Param('userId') userId: string,
-    @Request() req,
-  ) {
-    const unbannedBy = req.user.userId
-    return this.roomMembersService.unbanUser(id, userId, unbannedBy)
+  async unbanUser(@Param('id') id: string, @Param('userId') userId: string, @Request() req) {
+    const unbannedBy = req.user.userId;
+    return this.roomMembersService.unbanUser(id, userId, unbannedBy);
   }
 
   @Get('my')
   @Version('2')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({
-    summary: 'Получить все комнаты пользователя (владелец или участник)',
-  })
+  @ApiOperation({ summary: 'Получить все комнаты пользователя (владелец или участник)' })
   @ApiResponse({
     status: 200,
     description: 'Список комнат пользователя',
@@ -257,7 +237,7 @@ export class RoomsController {
     description: 'Не авторизован',
   })
   async getMyRooms(@Request() req) {
-    const userId = req.user.userId
-    return this.roomsService.findUserRooms(userId)
+    const userId = req.user.userId;
+    return this.roomsService.findUserRooms(userId);
   }
 }
