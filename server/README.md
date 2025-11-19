@@ -62,18 +62,48 @@ docker compose --profile app --profile db up --build
 docker compose down
 ```
 
+## API Documentation
+
+Swagger документация доступна по адресу: **http://localhost:3000/swagger**
+
+В Swagger UI можно:
+- Просмотреть все доступные endpoints
+- Протестировать API прямо из браузера
+- Авторизоваться с помощью API ключа (кнопка "Authorize")
+
+## API Versioning
+
+API использует URI версионирование. Все endpoints доступны по пути `/api/v1/...`
+
+Примеры:
+- `GET /api/v1/users` - список пользователей
+- `POST /api/v1/rooms` - создание комнаты
+- `GET /api/v1/auth/api-keys/:userId` - получение API ключей
+
 ## API Endpoints
 
-- `GET /` - Приветственное сообщение
-- `GET /health` - Проверка здоровья сервера
-- `GET /users` - Список пользователей
-- `POST /users` - Создание пользователя
-- `GET /users/:id` - Получение пользователя
-- `PATCH /users/:id` - Обновление пользователя
-- `DELETE /users/:id` - Удаление пользователя
-- `GET /rooms` - Список комнат
-- `POST /rooms` - Создание комнаты
-- `GET /rooms/:id` - Получение информации о комнате
+### App
+- `GET /api/v1/` - Приветственное сообщение
+- `GET /api/v1/health` - Проверка здоровья сервера
+- `GET /api/v1/protected` - Пример защищенного endpoint (требует API ключ)
+
+### Auth
+- `POST /api/v1/auth/api-keys` - Создать новый API ключ (публичный)
+- `GET /api/v1/auth/api-keys/:userId` - Получить все ключи пользователя
+- `DELETE /api/v1/auth/api-keys/:id` - Отозвать API ключ
+- `DELETE /api/v1/auth/api-keys/:id/delete` - Удалить API ключ
+
+### Users
+- `GET /api/v1/users` - Список пользователей
+- `POST /api/v1/users` - Создание пользователя
+- `GET /api/v1/users/:id` - Получение пользователя
+- `PATCH /api/v1/users/:id` - Обновление пользователя
+- `DELETE /api/v1/users/:id` - Удаление пользователя
+
+### Rooms
+- `GET /api/v1/rooms` - Список всех комнат
+- `POST /api/v1/rooms` - Создание комнаты
+- `GET /api/v1/rooms/:id` - Получение комнаты по ID
 
 ## Socket.io Events
 
