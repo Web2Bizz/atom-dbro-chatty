@@ -11,3 +11,4 @@ export const refreshTokens = pgTable('refresh_tokens', {
 
 export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type NewRefreshToken = typeof refreshTokens.$inferInsert;
+
