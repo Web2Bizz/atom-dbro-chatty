@@ -174,7 +174,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - access token required or invalid refresh token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - access token required or invalid refresh token',
+  })
   @UsePipes(new ZodValidationPipe(RefreshTokenSchema))
   async refresh(@Body() data: z.infer<typeof RefreshTokenSchema>) {
     return this.authService.refreshAccessToken(data.refreshToken);

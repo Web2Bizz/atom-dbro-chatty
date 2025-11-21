@@ -8,4 +8,3 @@ export const GetUser = createParamDecorator((data: unknown, ctx: ExecutionContex
   const request = ctx.switchToHttp().getRequest();
   return request.user;
 });
-
