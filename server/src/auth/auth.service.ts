@@ -370,11 +370,7 @@ export class AuthService {
    */
   async revokeApiKey(keyId: string, userId?: string): Promise<void> {
     // Сначала проверяем, существует ли ключ
-    const [apiKey] = await this.db
-      .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.id, keyId))
-      .limit(1);
+    const [apiKey] = await this.db.select().from(apiKeys).where(eq(apiKeys.id, keyId)).limit(1);
 
     if (!apiKey) {
       this.logger.warn(`Attempt to revoke non-existent API key: ${keyId}`);
@@ -383,7 +379,9 @@ export class AuthService {
 
     // Если передан userId, проверяем, что ключ принадлежит этому пользователю
     if (userId && apiKey.userId !== userId) {
-      this.logger.warn(`User ${userId} attempted to revoke API key ${keyId} that belongs to ${apiKey.userId}`);
+      this.logger.warn(
+        `User ${userId} attempted to revoke API key ${keyId} that belongs to ${apiKey.userId}`,
+      );
       throw new UnauthorizedException('You can only revoke your own API keys');
     }
 
@@ -398,11 +396,7 @@ export class AuthService {
    */
   async deleteApiKey(keyId: string, userId?: string): Promise<void> {
     // Сначала проверяем, существует ли ключ
-    const [apiKey] = await this.db
-      .select()
-      .from(apiKeys)
-      .where(eq(apiKeys.id, keyId))
-      .limit(1);
+    const [apiKey] = await this.db.select().from(apiKeys).where(eq(apiKeys.id, keyId)).limit(1);
 
     if (!apiKey) {
       this.logger.warn(`Attempt to delete non-existent API key: ${keyId}`);
@@ -411,7 +405,9 @@ export class AuthService {
 
     // Если передан userId, проверяем, что ключ принадлежит этому пользователю
     if (userId && apiKey.userId !== userId) {
-      this.logger.warn(`User ${userId} attempted to delete API key ${keyId} that belongs to ${apiKey.userId}`);
+      this.logger.warn(
+        `User ${userId} attempted to delete API key ${keyId} that belongs to ${apiKey.userId}`,
+      );
       throw new UnauthorizedException('You can only delete your own API keys');
     }
 

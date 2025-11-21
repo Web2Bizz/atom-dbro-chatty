@@ -24,15 +24,15 @@ function LoginForm({ onLogin }) {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
+    <div className='login-container'>
+      <div className='login-card'>
         <h1>Chatty</h1>
-        <p className="subtitle">Добро пожаловать в чат!</p>
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="input-group">
+        <p className='subtitle'>Добро пожаловать в чат!</p>
+        <form onSubmit={handleSubmit} className='login-form'>
+          <div className='input-group'>
             <input
-              type="text"
-              placeholder="Введите ваше имя"
+              type='text'
+              placeholder='Введите ваше имя'
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value)
@@ -41,9 +41,9 @@ function LoginForm({ onLogin }) {
               className={error ? 'input-error' : ''}
               autoFocus
             />
-            {error && <span className="error-message">{error}</span>}
+            {error && <span className='error-message'>{error}</span>}
           </div>
-          <button type="submit" className="login-button">
+          <button type='submit' className='login-button'>
             Войти в чат
           </button>
         </form>
@@ -53,4 +53,3 @@ function LoginForm({ onLogin }) {
 }
 
 export default LoginForm
-

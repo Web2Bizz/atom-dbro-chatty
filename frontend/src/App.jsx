@@ -17,7 +17,7 @@ function App() {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
     })
 
     newSocket.on('connect', () => {
@@ -54,7 +54,7 @@ function App() {
     // Переподключение
     const newSocket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
-      reconnection: true
+      reconnection: true,
     })
     setSocket(newSocket)
   }
@@ -64,7 +64,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className='app'>
       <ChatContainer
         socket={socket}
         username={username}
@@ -76,4 +76,3 @@ function App() {
 }
 
 export default App
-

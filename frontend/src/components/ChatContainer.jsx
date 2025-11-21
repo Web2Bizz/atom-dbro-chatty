@@ -29,8 +29,8 @@ function ChatContainer({ socket, username, isConnected, onLogout }) {
           username: data.username,
           message: data.message,
           timestamp: data.timestamp || new Date().toISOString(),
-          type: 'user'
-        }
+          type: 'user',
+        },
       ])
     })
 
@@ -42,8 +42,8 @@ function ChatContainer({ socket, username, isConnected, onLogout }) {
           id: Date.now() + Math.random(),
           message: data.message,
           timestamp: data.timestamp || new Date().toISOString(),
-          type: 'system'
-        }
+          type: 'system',
+        },
       ])
     })
 
@@ -72,13 +72,13 @@ function ChatContainer({ socket, username, isConnected, onLogout }) {
       socket.emit('message', {
         username,
         message: message.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       })
     }
   }
 
   return (
-    <div className="chat-container">
+    <div className='chat-container'>
       <ChatHeader
         username={username}
         users={users}
@@ -93,4 +93,3 @@ function ChatContainer({ socket, username, isConnected, onLogout }) {
 }
 
 export default ChatContainer
-
