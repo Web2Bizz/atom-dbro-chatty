@@ -11,7 +11,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     const user = localStorage.getItem('user')
     const token = localStorage.getItem('accessToken')
-    
+
     if (user && token) {
       setIsAuthenticated(true)
     } else {
@@ -32,4 +32,3 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
 }
 
 export default ProtectedRoute
-

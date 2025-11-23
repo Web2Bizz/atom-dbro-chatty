@@ -120,4 +120,3 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
 }
 
 export default ChatList
-

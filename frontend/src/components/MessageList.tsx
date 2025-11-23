@@ -56,4 +56,3 @@ function MessageList({ messages, currentUsername }: MessageListProps) {
 }
 
 export default MessageList
-

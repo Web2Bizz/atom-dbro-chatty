@@ -88,12 +88,15 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   async register(@Body() data: z.infer<typeof RegisterSchema>) {
     // Логируем полученные данные для отладки
-    console.log('Register request received:', { username: data.username, hasPassword: !!data.password });
-    
+    console.log('Register request received:', {
+      username: data.username,
+      hasPassword: !!data.password,
+    });
+
     if (!data.username) {
       throw new UnauthorizedException('Username is required');
     }
-    
+
     if (!data.password) {
       throw new UnauthorizedException('Password is required');
     }

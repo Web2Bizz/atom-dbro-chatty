@@ -22,7 +22,7 @@ export function redirectToLogin(): void {
  */
 export async function apiRequest(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   const token = localStorage.getItem('accessToken')
 
@@ -56,9 +56,8 @@ export async function apiRequest(
  */
 export async function apiRequestJson<T = unknown>(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const response = await apiRequest(url, options)
   return response.json()
 }
-

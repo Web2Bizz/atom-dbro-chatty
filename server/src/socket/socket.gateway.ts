@@ -153,7 +153,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   }
 
   @SubscribeMessage('message')
-  async handleMessage(@MessageBody() data: unknown, @ConnectedSocket() client: AuthenticatedSocket) {
+  async handleMessage(
+    @MessageBody() data: unknown,
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
     try {
       // Поддерживаем оба формата для обратной совместимости
       const messageData = typeof data === 'object' && data !== null ? data : {};
@@ -191,10 +194,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
             });
             this.logger.log(`Message saved to database: ${savedMessage.id} in room ${parsed.room}`);
           } catch (error) {
-            this.logger.error(
-              `Failed to save message to database: ${error.message}`,
-              error.stack,
-            );
+            this.logger.error(`Failed to save message to database: ${error.message}`, error.stack);
             // Продолжаем отправку сообщения даже если сохранение не удалось
           }
 
@@ -232,10 +232,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
           });
           this.logger.debug(`Message saved to database: ${savedMessage.id}`);
         } catch (error) {
-          this.logger.error(
-            `Failed to save message to database: ${error.message}`,
-            error.stack,
-          );
+          this.logger.error(`Failed to save message to database: ${error.message}`, error.stack);
           // Продолжаем отправку сообщения даже если сохранение не удалось
         }
 

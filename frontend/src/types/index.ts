@@ -31,4 +31,3 @@ export interface RegisterResponse {
   refreshToken: string
   user: User
 }
-

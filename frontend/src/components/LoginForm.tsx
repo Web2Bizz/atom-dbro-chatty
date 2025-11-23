@@ -47,7 +47,8 @@ function LoginForm({ onLogin }: LoginFormProps) {
           }),
         })
 
-        const responseData: RegisterResponse & { message?: string } = await response.json()
+        const responseData: RegisterResponse & { message?: string } =
+          await response.json()
 
         if (!response.ok) {
           setError(responseData.message || 'Ошибка регистрации')
@@ -67,10 +68,13 @@ function LoginForm({ onLogin }: LoginFormProps) {
           }),
         })
 
-        const loginData: LoginResponse & { message?: string } = await loginResponse.json()
+        const loginData: LoginResponse & { message?: string } =
+          await loginResponse.json()
 
         if (!loginResponse.ok) {
-          setError('Регистрация успешна, но не удалось войти. Попробуйте войти вручную.')
+          setError(
+            'Регистрация успешна, но не удалось войти. Попробуйте войти вручную.',
+          )
           setLoading(false)
           setIsRegister(false)
           reset()
@@ -102,10 +106,14 @@ function LoginForm({ onLogin }: LoginFormProps) {
           }),
         })
 
-        const responseData: LoginResponse & { message?: string } = await response.json()
+        const responseData: LoginResponse & { message?: string } =
+          await response.json()
 
         if (!response.ok) {
-          setError(responseData.message || 'Ошибка входа. Проверьте имя пользователя и пароль.')
+          setError(
+            responseData.message ||
+              'Ошибка входа. Проверьте имя пользователя и пароль.',
+          )
           setLoading(false)
           return
         }
@@ -142,11 +150,13 @@ function LoginForm({ onLogin }: LoginFormProps) {
                     required: 'Пожалуйста, введите имя пользователя',
                     minLength: {
                       value: 3,
-                      message: 'Имя пользователя должно быть не менее 3 символов',
+                      message:
+                        'Имя пользователя должно быть не менее 3 символов',
                     },
                     maxLength: {
                       value: 100,
-                      message: 'Имя пользователя должно быть не более 100 символов',
+                      message:
+                        'Имя пользователя должно быть не более 100 символов',
                     },
                   })}
                   className={errors.username || error ? 'input-error' : ''}
@@ -154,7 +164,9 @@ function LoginForm({ onLogin }: LoginFormProps) {
                   disabled={loading}
                 />
                 {errors.username && (
-                  <span className='error-message'>{errors.username.message}</span>
+                  <span className='error-message'>
+                    {errors.username.message}
+                  </span>
                 )}
               </div>
               <div className='input-group'>
@@ -172,7 +184,9 @@ function LoginForm({ onLogin }: LoginFormProps) {
                   disabled={loading}
                 />
                 {errors.password && (
-                  <span className='error-message'>{errors.password.message}</span>
+                  <span className='error-message'>
+                    {errors.password.message}
+                  </span>
                 )}
                 {error && !errors.password && (
                   <span className='error-message'>{error}</span>
@@ -204,11 +218,13 @@ function LoginForm({ onLogin }: LoginFormProps) {
                     required: 'Пожалуйста, введите имя пользователя',
                     minLength: {
                       value: 3,
-                      message: 'Имя пользователя должно быть не менее 3 символов',
+                      message:
+                        'Имя пользователя должно быть не менее 3 символов',
                     },
                     maxLength: {
                       value: 100,
-                      message: 'Имя пользователя должно быть не более 100 символов',
+                      message:
+                        'Имя пользователя должно быть не более 100 символов',
                     },
                   })}
                   className={errors.username || error ? 'input-error' : ''}
@@ -216,7 +232,9 @@ function LoginForm({ onLogin }: LoginFormProps) {
                   disabled={loading}
                 />
                 {errors.username && (
-                  <span className='error-message'>{errors.username.message}</span>
+                  <span className='error-message'>
+                    {errors.username.message}
+                  </span>
                 )}
               </div>
               <div className='input-group'>
@@ -234,7 +252,9 @@ function LoginForm({ onLogin }: LoginFormProps) {
                   disabled={loading}
                 />
                 {errors.password && (
-                  <span className='error-message'>{errors.password.message}</span>
+                  <span className='error-message'>
+                    {errors.password.message}
+                  </span>
                 )}
                 {error && !errors.password && (
                   <span className='error-message'>{error}</span>
@@ -264,4 +284,3 @@ function LoginForm({ onLogin }: LoginFormProps) {
 }
 
 export default LoginForm
-

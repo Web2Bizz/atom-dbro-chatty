@@ -10,7 +10,15 @@ export class ZodValidationPipe implements PipeTransform {
     if (metadata.type === 'body' && (value === undefined || value === null)) {
       throw new BadRequestException({
         message: 'Validation failed',
-        errors: [{ code: 'invalid_type', expected: 'object', received: value === undefined ? 'undefined' : 'null', path: [], message: 'Required' }],
+        errors: [
+          {
+            code: 'invalid_type',
+            expected: 'object',
+            received: value === undefined ? 'undefined' : 'null',
+            path: [],
+            message: 'Required',
+          },
+        ],
       });
     }
 

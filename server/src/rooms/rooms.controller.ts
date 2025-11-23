@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, UsePipes, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UsePipes,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -88,10 +98,7 @@ export class RoomsController {
   @ApiResponse({ status: 200, description: 'Room messages history' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  async getRoomMessages(
-    @Param('id') id: string,
-    @Query('limit') limit?: string,
-  ) {
+  async getRoomMessages(@Param('id') id: string, @Query('limit') limit?: string) {
     const messageLimit = limit ? parseInt(limit, 10) : 100;
     const messages = await this.roomsService.getRoomMessages(id, messageLimit);
     // Возвращаем в обратном порядке (старые первыми)

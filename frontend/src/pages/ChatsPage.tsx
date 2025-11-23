@@ -41,7 +41,11 @@ function ChatsPage() {
   return (
     <div className='chats-page'>
       <div className='chats-layout'>
-        <ChatList user={user} onSelectRoom={handleSelectRoom} onLogout={handleLogout} />
+        <ChatList
+          user={user}
+          onSelectRoom={handleSelectRoom}
+          onLogout={handleLogout}
+        />
         <div className='welcome-message'>
           <h2>Добро пожаловать, {user.username}!</h2>
           <p>Выберите чат из списка слева, чтобы начать общение.</p>
@@ -52,4 +56,3 @@ function ChatsPage() {
 }
 
 export default ChatsPage
-

@@ -23,7 +23,14 @@ interface MessageHistoryItem {
   createdAt: string
 }
 
-function ChatContainer({ socket, username, isConnected, onLogout, room, onBack }: ChatContainerProps) {
+function ChatContainer({
+  socket,
+  username,
+  isConnected,
+  onLogout,
+  room,
+  onBack,
+}: ChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [users, setUsers] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -42,7 +49,9 @@ function ChatContainer({ socket, username, isConnected, onLogout, room, onBack }
 
     const loadMessageHistory = async () => {
       try {
-        const history = await apiRequestJson<MessageHistoryItem[]>(`/rooms/${room.id}/messages`)
+        const history = await apiRequestJson<MessageHistoryItem[]>(
+          `/rooms/${room.id}/messages`,
+        )
         // Преобразуем формат сообщений из БД в формат для UI
         const formattedMessages: Message[] = history.map((msg) => ({
           id: msg.id,
@@ -65,18 +74,21 @@ function ChatContainer({ socket, username, isConnected, onLogout, room, onBack }
     if (!socket) return
 
     // Получение новых сообщений
-    socket.on('message', (data: { username: string; message: string; timestamp?: string }) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + Math.random(),
-          username: data.username,
-          message: data.message,
-          timestamp: data.timestamp || new Date().toISOString(),
-          type: 'user',
-        },
-      ])
-    })
+    socket.on(
+      'message',
+      (data: { username: string; message: string; timestamp?: string }) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            username: data.username,
+            message: data.message,
+            timestamp: data.timestamp || new Date().toISOString(),
+            type: 'user',
+          },
+        ])
+      },
+    )
 
     // Получение системных сообщений
     socket.on('system', (data: { message: string; timestamp?: string }) => {
@@ -140,4 +152,3 @@ function ChatContainer({ socket, username, isConnected, onLogout, room, onBack }
 }
 
 export default ChatContainer
-

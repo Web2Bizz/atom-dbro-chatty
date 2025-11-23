@@ -10,7 +10,14 @@ interface ChatHeaderProps {
   onBack?: () => void
 }
 
-function ChatHeader({ username, users, isConnected, onLogout, room, onBack }: ChatHeaderProps) {
+function ChatHeader({
+  username,
+  users,
+  isConnected,
+  onLogout,
+  room,
+  onBack,
+}: ChatHeaderProps) {
   return (
     <div className='chat-header'>
       <div className='header-left'>
@@ -43,4 +50,3 @@ function ChatHeader({ username, users, isConnected, onLogout, room, onBack }: Ch
 }
 
 export default ChatHeader
-

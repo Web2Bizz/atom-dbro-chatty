@@ -17,7 +17,11 @@ interface FormData {
   isPrivate?: boolean
 }
 
-function CreateRoomModal({ isOpen, onClose, onRoomCreated }: CreateRoomModalProps) {
+function CreateRoomModal({
+  isOpen,
+  onClose,
+  onRoomCreated,
+}: CreateRoomModalProps) {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -78,20 +82,23 @@ function CreateRoomModal({ isOpen, onClose, onRoomCreated }: CreateRoomModalProp
   const handleCopyLink = () => {
     if (createdRoom) {
       const roomUrl = getRoomUrl()
-      navigator.clipboard.writeText(roomUrl).then(() => {
-        setLinkCopied(true)
-        setTimeout(() => setLinkCopied(false), 2000)
-      }).catch(() => {
-        // Fallback для старых браузеров
-        const input = document.createElement('input')
-        input.value = roomUrl
-        document.body.appendChild(input)
-        input.select()
-        document.execCommand('copy')
-        document.body.removeChild(input)
-        setLinkCopied(true)
-        setTimeout(() => setLinkCopied(false), 2000)
-      })
+      navigator.clipboard
+        .writeText(roomUrl)
+        .then(() => {
+          setLinkCopied(true)
+          setTimeout(() => setLinkCopied(false), 2000)
+        })
+        .catch(() => {
+          // Fallback для старых браузеров
+          const input = document.createElement('input')
+          input.value = roomUrl
+          document.body.appendChild(input)
+          input.select()
+          document.execCommand('copy')
+          document.body.removeChild(input)
+          setLinkCopied(true)
+          setTimeout(() => setLinkCopied(false), 2000)
+        })
     }
   }
 
@@ -203,7 +210,9 @@ function CreateRoomModal({ isOpen, onClose, onRoomCreated }: CreateRoomModalProp
                 disabled={loading}
               />
               {errors.description && (
-                <span className='error-message'>{errors.description.message}</span>
+                <span className='error-message'>
+                  {errors.description.message}
+                </span>
               )}
             </div>
 
@@ -221,10 +230,19 @@ function CreateRoomModal({ isOpen, onClose, onRoomCreated }: CreateRoomModalProp
             {error && <div className='error-message'>{error}</div>}
 
             <div className='form-actions'>
-              <button type='button' onClick={handleClose} className='cancel-button' disabled={loading}>
+              <button
+                type='button'
+                onClick={handleClose}
+                className='cancel-button'
+                disabled={loading}
+              >
                 Отмена
               </button>
-              <button type='submit' className='submit-button' disabled={loading}>
+              <button
+                type='submit'
+                className='submit-button'
+                disabled={loading}
+              >
                 {loading ? 'Создание...' : 'Создать чат'}
               </button>
             </div>
@@ -236,4 +254,3 @@ function CreateRoomModal({ isOpen, onClose, onRoomCreated }: CreateRoomModalProp
 }
 
 export default CreateRoomModal
-

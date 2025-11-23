@@ -177,14 +177,21 @@ export class AuthService {
         .where(eq(users.username, trimmedUsername))
         .limit(1);
       existingUser = result[0];
-      this.logger.log(`Username check result for "${trimmedUsername}": ${existingUser ? 'EXISTS' : 'NOT FOUND'}`);
+      this.logger.log(
+        `Username check result for "${trimmedUsername}": ${existingUser ? 'EXISTS' : 'NOT FOUND'}`,
+      );
     } catch (error) {
-      this.logger.error(`Database error while checking username: ${error instanceof Error ? error.message : 'Unknown error'}`, error);
+      this.logger.error(
+        `Database error while checking username: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error,
+      );
       throw new ConflictException('Database error while checking username');
     }
 
     if (existingUser) {
-      this.logger.warn(`Registration attempt with existing username: ${trimmedUsername} (ID: ${existingUser.id})`);
+      this.logger.warn(
+        `Registration attempt with existing username: ${trimmedUsername} (ID: ${existingUser.id})`,
+      );
       throw new ConflictException('Username already exists');
     }
 
@@ -193,7 +200,7 @@ export class AuthService {
 
     // Создаем пользователя
     this.logger.log(`Creating user with username: ${trimmedUsername}`);
-    
+
     try {
       const [user] = await this.db
         .insert(users)
@@ -216,8 +223,11 @@ export class AuthService {
         this.logger.error(`Unique constraint violation: ${error.message}`);
         throw new ConflictException('User with this username already exists');
       }
-      
-      this.logger.error(`Error creating user: ${error instanceof Error ? error.message : 'Unknown error'}`, error);
+
+      this.logger.error(
+        `Error creating user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error,
+      );
       throw new ConflictException('Failed to create user');
     }
   }

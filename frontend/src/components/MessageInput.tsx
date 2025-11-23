@@ -70,4 +70,3 @@ function MessageInput({ onSendMessage, disabled }: MessageInputProps) {
 }
 
 export default MessageInput
-
