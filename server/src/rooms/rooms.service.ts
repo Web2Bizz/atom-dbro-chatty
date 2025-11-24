@@ -33,11 +33,7 @@ export class RoomsService {
       return this.db.select().from(rooms).orderBy(rooms.createdAt);
     }
     // Возвращаем только публичные комнаты
-    return this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.isPrivate, false))
-      .orderBy(rooms.createdAt);
+    return this.db.select().from(rooms).where(eq(rooms.isPrivate, false)).orderBy(rooms.createdAt);
   }
 
   async findOne(id: string): Promise<Room> {
@@ -62,11 +58,7 @@ export class RoomsService {
 
   async findByUserIdOnly(userId: string): Promise<Room[]> {
     // Получаем только комнаты, созданные конкретным пользователем
-    return this.db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.createdBy, userId))
-      .orderBy(rooms.createdAt);
+    return this.db.select().from(rooms).where(eq(rooms.createdBy, userId)).orderBy(rooms.createdAt);
   }
 
   async createMessage(data: NewMessage): Promise<Message> {

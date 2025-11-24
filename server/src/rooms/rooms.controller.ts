@@ -71,7 +71,10 @@ export class RoomsController {
   @ApiOperation({ summary: 'Get all existing rooms' })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
-  @ApiResponse({ status: 200, description: 'List of all rooms (public only for unauthorized users)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all rooms (public only for unauthorized users)',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(
     @GetUser() user?: { userId: string; username?: string },
