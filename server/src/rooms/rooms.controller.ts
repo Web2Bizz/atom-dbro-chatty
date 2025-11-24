@@ -71,7 +71,8 @@ export class RoomsController {
         type: {
           type: 'string',
           enum: ['normal', 'support'],
-          description: 'Room type: normal (regular chat) or support (support chat where users can only message moderators)',
+          description:
+            'Room type: normal (regular chat) or support (support chat where users can only message moderators)',
         },
       },
     },
@@ -211,7 +212,8 @@ export class RoomsController {
         },
         username: {
           type: 'string',
-          description: 'Optional username override (defaults to authenticated user or API key name)',
+          description:
+            'Optional username override (defaults to authenticated user or API key name)',
         },
         recipientId: {
           type: 'string',
@@ -242,12 +244,9 @@ export class RoomsController {
 
     if (user?.userId) {
       userId = user.userId;
-      const [dbUser] = await this.db
-        .select()
-        .from(users)
-        .where(eq(users.id, user.userId))
-        .limit(1);
-      username = body.username || dbUser?.username || user.username || `user-${user.userId.substring(0, 8)}`;
+      const [dbUser] = await this.db.select().from(users).where(eq(users.id, user.userId)).limit(1);
+      username =
+        body.username || dbUser?.username || user.username || `user-${user.userId.substring(0, 8)}`;
     } else if (apiKey) {
       userId = apiKey.userId || null;
       username = body.username || apiKey.name || `api-key-${apiKey.id.substring(0, 8)}`;

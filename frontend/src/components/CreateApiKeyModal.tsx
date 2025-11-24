@@ -22,7 +22,8 @@ function CreateApiKeyModal({
 }: CreateApiKeyModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [createdApiKey, setCreatedApiKey] = useState<CreateApiKeyResponse | null>(null)
+  const [createdApiKey, setCreatedApiKey] =
+    useState<CreateApiKeyResponse | null>(null)
   const [keyCopied, setKeyCopied] = useState(false)
 
   const {
@@ -45,10 +46,13 @@ function CreateApiKeyModal({
         requestBody.expiresInDays = data.expiresInDays
       }
 
-      const response = await apiRequestJson<CreateApiKeyResponse>('/auth/api-keys', {
-        method: 'POST',
-        body: JSON.stringify(requestBody),
-      })
+      const response = await apiRequestJson<CreateApiKeyResponse>(
+        '/auth/api-keys',
+        {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        },
+      )
 
       setCreatedApiKey(response)
       onApiKeyCreated()
@@ -96,7 +100,10 @@ function CreateApiKeyModal({
 
   return (
     <div className='modal-overlay' onClick={handleClose}>
-      <div className='modal-content api-key-modal' onClick={(e) => e.stopPropagation()}>
+      <div
+        className='modal-content api-key-modal'
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className='modal-header'>
           <h2>Создать новый токен</h2>
           <button className='modal-close' onClick={handleClose}>
@@ -108,12 +115,14 @@ function CreateApiKeyModal({
           <div className='api-key-created'>
             <div className='success-icon'>✓</div>
             <h3>Токен успешно создан!</h3>
-            {createdApiKey.name && <p className='api-key-name'>{createdApiKey.name}</p>}
+            {createdApiKey.name && (
+              <p className='api-key-name'>{createdApiKey.name}</p>
+            )}
             <div className='api-key-warning'>
               <strong>⚠️ Внимание!</strong>
               <p>
-                Сохраните этот токен сейчас. Вы больше не сможете увидеть его после закрытия этого
-                окна.
+                Сохраните этот токен сейчас. Вы больше не сможете увидеть его
+                после закрытия этого окна.
               </p>
             </div>
             <div className='api-key-section'>
@@ -136,7 +145,8 @@ function CreateApiKeyModal({
             <div className='api-key-info'>
               <p>
                 Используйте этот токен в заголовке <code>X-API-Key</code> или{' '}
-                <code>Authorization: Bearer</code> для отправки сообщений через API.
+                <code>Authorization: Bearer</code> для отправки сообщений через
+                API.
               </p>
             </div>
             <div className='api-key-created-actions'>
@@ -146,7 +156,10 @@ function CreateApiKeyModal({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className='create-api-key-form'>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className='create-api-key-form'
+          >
             <div className='form-group'>
               <label htmlFor='name'>Название токена (необязательно)</label>
               <input
@@ -189,7 +202,9 @@ function CreateApiKeyModal({
                 disabled={loading}
               />
               {errors.expiresInDays && (
-                <span className='error-message'>{errors.expiresInDays.message}</span>
+                <span className='error-message'>
+                  {errors.expiresInDays.message}
+                </span>
               )}
               <small className='form-hint'>
                 Если не указано, токен будет действовать бессрочно
@@ -223,4 +238,3 @@ function CreateApiKeyModal({
 }
 
 export default CreateApiKeyModal
-
