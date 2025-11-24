@@ -42,7 +42,8 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
         return
       }
       console.error('Error fetching rooms:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка'
+      const errorMessage =
+        err instanceof Error ? err.message : 'Неизвестная ошибка'
       setError(`Не удалось загрузить список чатов: ${errorMessage}`)
       setRooms([])
     } finally {
