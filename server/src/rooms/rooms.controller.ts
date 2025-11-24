@@ -85,13 +85,18 @@ export class RoomsController {
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
   ) {
-    return this.roomsService.create({
+    const room = await this.roomsService.create({
       name: body.name,
       description: body.description ?? null,
-      isPrivate: body.isPrivate ?? false,
+      isPrivate: body.isPrivate ?? true, // По умолчанию приватные комнаты
       type: body.type ?? 'normal',
       createdBy: user?.userId ?? apiKey?.userId ?? null,
     });
+
+    // Отправляем событие о создании комнаты через WebSocket
+    this.socketGateway.emitRoomCreated(room);
+
+    return room;
   }
 
   @Get()

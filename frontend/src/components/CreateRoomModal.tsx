@@ -50,9 +50,11 @@ function CreateRoomModal({
         requestBody.description = data.description.trim()
       }
 
-      // Добавляем isPrivate только если оно true
-      if (data.isPrivate) {
-        requestBody.isPrivate = true
+      // По умолчанию приватные комнаты, добавляем isPrivate только если явно указано false
+      if (data.isPrivate === false) {
+        requestBody.isPrivate = false
+      } else {
+        requestBody.isPrivate = true // По умолчанию приватные
       }
 
       const response = await apiRequestJson<Room>('/rooms', {

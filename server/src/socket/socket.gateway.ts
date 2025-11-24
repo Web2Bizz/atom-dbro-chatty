@@ -391,4 +391,28 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
     client.emit('users', { users });
   }
+
+  /**
+   * Отправляет событие о создании новой комнаты всем подключенным клиентам
+   * Работает для всех типов комнат (normal, support) независимо от приватности
+   */
+  emitRoomCreated(room: any) {
+    this.server.emit('room-created', {
+      room,
+      timestamp: new Date().toISOString(),
+    });
+    this.logger.log(
+      `Room created event emitted: ${room.name} (${room.id}) [type: ${room.type || 'normal'}, private: ${room.isPrivate || false}]`,
+    );
+  }
+
+  /**
+   * Отправляет событие об обновлении списка комнат всем подключенным клиентам
+   */
+  emitRoomsUpdated() {
+    this.server.emit('rooms-updated', {
+      timestamp: new Date().toISOString(),
+    });
+    this.logger.log('Rooms updated event emitted');
+  }
 }

@@ -4,6 +4,7 @@ import './ChatList.css'
 import CreateRoomModal from './CreateRoomModal'
 import { apiRequestJson } from '../utils/api'
 import { User, Room } from '../types'
+import { getSocket } from '../utils/socket'
 
 interface ChatListProps {
   user: User
@@ -21,6 +22,54 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
   useEffect(() => {
     fetchRooms()
   }, [user])
+
+  useEffect(() => {
+    // Подписываемся на события создания комнат через WebSocket
+    const socket = getSocket()
+
+    const handleRoomCreated = (data: { room: Room; timestamp: string }) => {
+      console.log('Room created event received:', data.room)
+      // Добавляем новую комнату в список независимо от типа (normal/support) и приватности
+      // Внешнее приложение само решает, показывать ли комнату пользователю
+      setRooms((prevRooms) => {
+        const exists = prevRooms.some((r) => r.id === data.room.id)
+        if (exists) {
+          return prevRooms
+        }
+        // Добавляем новую комнату в начало списка
+        return [data.room, ...prevRooms]
+      })
+    }
+
+    const handleRoomsUpdated = async () => {
+      console.log('Rooms updated event received, refreshing list...')
+      // Обновляем список комнат
+      try {
+        const data = await apiRequestJson<Room[]>('/rooms/my')
+        if (Array.isArray(data)) {
+          setRooms(data)
+          setError('')
+        } else {
+          console.error('Expected array but got:', data)
+          setRooms([])
+          setError('Неверный формат данных от сервера')
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message === 'Unauthorized') {
+          return
+        }
+        console.error('Error fetching rooms:', err)
+      }
+    }
+
+    socket.on('room-created', handleRoomCreated)
+    socket.on('rooms-updated', handleRoomsUpdated)
+
+    return () => {
+      socket.off('room-created', handleRoomCreated)
+      socket.off('rooms-updated', handleRoomsUpdated)
+    }
+  }, [])
 
   const fetchRooms = async () => {
     setError('')

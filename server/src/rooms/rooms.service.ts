@@ -19,7 +19,7 @@ export class RoomsService {
       .values({
         ...data,
         description: data.description ?? null,
-        isPrivate: data.isPrivate ?? false,
+        isPrivate: data.isPrivate ?? true, // По умолчанию приватные комнаты
         type: data.type ?? 'normal',
       })
       .returning();
