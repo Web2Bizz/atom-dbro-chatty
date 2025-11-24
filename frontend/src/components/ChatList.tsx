@@ -23,16 +23,29 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
   }, [user])
 
   const fetchRooms = async () => {
+    setError('')
+    setLoading(true)
     try {
       const data = await apiRequestJson<Room[]>('/rooms/my')
-      setRooms(data)
-      setLoading(false)
+      // Убеждаемся, что data - это массив
+      if (Array.isArray(data)) {
+        setRooms(data)
+        setError('')
+      } else {
+        console.error('Expected array but got:', data)
+        setRooms([])
+        setError('Неверный формат данных от сервера')
+      }
     } catch (err) {
       if (err instanceof Error && err.message === 'Unauthorized') {
         // Перенаправление уже выполнено в apiRequest
         return
       }
-      setError('Не удалось загрузить список чатов')
+      console.error('Error fetching rooms:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка'
+      setError(`Не удалось загрузить список чатов: ${errorMessage}`)
+      setRooms([])
+    } finally {
       setLoading(false)
     }
   }
@@ -97,7 +110,7 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
           </button>
         </div>
         <div className='rooms-list'>
-          {rooms.length === 0 ? (
+          {!Array.isArray(rooms) || rooms.length === 0 ? (
             <div className='no-rooms'>У вас пока нет чатов</div>
           ) : (
             rooms.map((room) => (

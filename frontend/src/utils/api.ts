@@ -59,5 +59,26 @@ export async function apiRequestJson<T = unknown>(
   options: RequestInit = {},
 ): Promise<T> {
   const response = await apiRequest(url, options)
+  
+  // Проверяем, что ответ успешный
+  if (!response.ok) {
+    const errorText = await response.text()
+    let errorMessage = `HTTP error! status: ${response.status}`
+    try {
+      const errorJson = JSON.parse(errorText)
+      errorMessage = errorJson.message || errorJson.error || errorMessage
+    } catch {
+      errorMessage = errorText || errorMessage
+    }
+    throw new Error(errorMessage)
+  }
+  
+  // Проверяем, что есть контент для парсинга
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text()
+    throw new Error(`Expected JSON but got: ${contentType || 'no content-type'}. Response: ${text.substring(0, 100)}`)
+  }
+  
   return response.json()
 }
