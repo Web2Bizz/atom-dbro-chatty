@@ -8,6 +8,7 @@ export const messages = pgTable('messages', {
     .notNull()
     .references(() => rooms.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  recipientId: uuid('recipient_id').references(() => users.id, { onDelete: 'set null' }),
   username: varchar('username', { length: 100 }).notNull(),
   content: text('content').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

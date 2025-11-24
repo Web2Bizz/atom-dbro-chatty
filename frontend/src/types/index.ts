@@ -32,3 +32,31 @@ export interface RegisterResponse {
   refreshToken: string
   user: User
 }
+
+export interface ApiKey {
+  id: string
+  name?: string
+  key?: string // Только при создании
+  userId?: string
+  lastUsedAt?: string
+  createdAt: string
+  expiresAt?: string
+  isActive: boolean
+  scopes?: string[]
+}
+
+export interface CreateApiKeyRequest {
+  name?: string
+  expiresInDays?: number
+  scopes?: string[]
+}
+
+export interface CreateApiKeyResponse {
+  id: string
+  key: string
+  name?: string
+  createdAt: string
+  expiresAt?: string
+  scopes?: string[]
+  userId?: string
+}

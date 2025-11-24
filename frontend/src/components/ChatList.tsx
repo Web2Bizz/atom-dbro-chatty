@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './ChatList.css'
 import CreateRoomModal from './CreateRoomModal'
 import { apiRequestJson } from '../utils/api'
@@ -11,6 +12,7 @@ interface ChatListProps {
 }
 
 function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
+  const navigate = useNavigate()
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -86,6 +88,12 @@ function ChatList({ user, onSelectRoom, onLogout }: ChatListProps) {
             className='create-room-button'
           >
             + Создать чат
+          </button>
+          <button
+            onClick={() => navigate('/api-keys')}
+            className='api-keys-button'
+          >
+            🔑 API Токены
           </button>
         </div>
         <div className='rooms-list'>

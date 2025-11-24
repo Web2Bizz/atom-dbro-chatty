@@ -13,11 +13,13 @@ async function bootstrap() {
 
   // Enable CORS for Socket.io and API - разрешить все запросы
   app.enableCors({
-    origin: true,
+    origin: '*', // Разрешить все источники
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['*'],
-    exposedHeaders: ['*'],
+    allowedHeaders: ['*'], // Разрешить все заголовки
+    exposedHeaders: ['*'], // Разрешить все заголовки в ответе
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // API Versioning

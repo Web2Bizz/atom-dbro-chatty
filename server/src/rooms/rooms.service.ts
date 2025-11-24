@@ -2,7 +2,7 @@ import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
 import { DATABASE_CONNECTION, Database } from '../database/database.module';
 import { rooms, Room, NewRoom } from '../database/schema/rooms';
 import { messages, Message, NewMessage } from '../database/schema/messages';
-import { eq, or, desc } from 'drizzle-orm';
+import { eq, or, desc, and } from 'drizzle-orm';
 
 @Injectable()
 export class RoomsService {
@@ -20,6 +20,7 @@ export class RoomsService {
         ...data,
         description: data.description ?? null,
         isPrivate: data.isPrivate ?? false,
+        type: data.type ?? 'normal',
       })
       .returning();
 
@@ -67,6 +68,7 @@ export class RoomsService {
       .values({
         ...data,
         userId: data.userId ?? null,
+        recipientId: data.recipientId ?? null,
       })
       .returning();
 
@@ -74,15 +76,46 @@ export class RoomsService {
     return message;
   }
 
-  async getRoomMessages(roomId: string, limit: number = 100): Promise<Message[]> {
+  /**
+   * Получает сообщения комнаты с опциональной фильтрацией
+   * @param roomId ID комнаты
+   * @param limit Лимит сообщений
+   * @param userId Опциональный фильтр: показывать только сообщения для этого пользователя
+   * @param includeRecipients Если true, включает сообщения где userId или recipientId = userId
+   */
+  async getRoomMessages(
+    roomId: string,
+    limit: number = 100,
+    userId?: string,
+    includeRecipients?: boolean,
+  ): Promise<Message[]> {
     // Проверяем, что комната существует
     await this.findOne(roomId);
 
-    return this.db
-      .select()
-      .from(messages)
-      .where(eq(messages.roomId, roomId))
-      .orderBy(desc(messages.createdAt))
-      .limit(limit);
+    let query = this.db.select().from(messages).where(eq(messages.roomId, roomId));
+
+    // Если указан userId и includeRecipients, фильтруем сообщения
+    if (userId && includeRecipients) {
+      query = this.db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.roomId, roomId),
+            or(
+              eq(messages.userId, userId), // Свои сообщения
+              eq(messages.recipientId, userId), // Сообщения адресованные ему
+            ),
+          ),
+        ) as any;
+    } else if (userId) {
+      // Только сообщения от этого пользователя
+      query = this.db
+        .select()
+        .from(messages)
+        .where(and(eq(messages.roomId, roomId), eq(messages.userId, userId))) as any;
+    }
+
+    return query.orderBy(desc(messages.createdAt)).limit(limit);
   }
 }

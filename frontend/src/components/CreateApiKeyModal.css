@@ -1,0 +1,121 @@
+.api-key-modal {
+  max-width: 600px;
+}
+
+.create-api-key-form {
+  padding: 1.5rem;
+}
+
+.form-hint {
+  display: block;
+  color: #999;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.api-key-created {
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.api-key-name {
+  font-size: 1.25rem;
+  color: #667eea;
+  font-weight: 600;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.api-key-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.api-key-warning strong {
+  display: block;
+  color: #856404;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.api-key-warning p {
+  margin: 0;
+  color: #856404;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.api-key-section {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.api-key-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.875rem;
+}
+
+.key-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.api-key-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  background: #f9f9f9;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.api-key-info {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 12px 15px;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.api-key-info p {
+  margin: 0;
+  color: #1976d2;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.api-key-info code {
+  background: rgba(33, 150, 243, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.api-key-created-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .key-container {
+    flex-direction: column;
+  }
+
+  .copy-button {
+    width: 100%;
+  }
+}
+

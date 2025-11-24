@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import ChatsPage from './pages/ChatsPage'
 import RoomPage from './pages/RoomPage'
+import ApiKeysPage from './pages/ApiKeysPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -15,6 +16,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RoomPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/api-keys'
+          element={
+            <ProtectedRoute>
+              <ApiKeysPage />
             </ProtectedRoute>
           }
         />

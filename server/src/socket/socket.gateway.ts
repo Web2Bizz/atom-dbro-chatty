@@ -9,7 +9,7 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, Injectable } from '@nestjs/common';
+import { Logger, Injectable, Inject, forwardRef } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
@@ -43,13 +43,19 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   private logger: Logger = new Logger('SocketGateway');
   private connectedClients = new Map<
     string,
-    { userId?: string; apiKeyId?: string; username?: string; authType?: 'user' | 'api-key' }
+    {
+      userId?: string;
+      apiKeyId?: string;
+      username?: string;
+      authType?: 'user' | 'api-key';
+    }
   >();
 
   constructor(
     private authService: AuthService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => RoomsService))
     private roomsService: RoomsService,
   ) {}
 
@@ -168,41 +174,55 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
             message: z.string().min(1).max(1000),
             username: z.string().optional(),
             room: z.string().optional(),
+            recipientId: z.string().uuid().optional().nullable(), // ID получателя (передается от внешнего приложения)
           })
           .parse(messageData);
 
         const clientInfo = this.connectedClients.get(client.id);
         const username =
           parsed.username || clientInfo?.username || clientInfo?.apiKeyId || client.id;
-        const timestamp = new Date().toISOString();
-
-        const messagePayload = {
-          username,
-          message: parsed.message,
-          timestamp,
-          authType: clientInfo?.authType,
-        };
 
         // Сохраняем сообщение в БД, если указана комната
         if (parsed.room) {
           try {
+            // Внешнее приложение само решает, кому адресовать сообщение
+            // Микросервис просто сохраняет recipientId как есть
             const savedMessage = await this.roomsService.createMessage({
               roomId: parsed.room,
               userId: clientInfo?.userId || null,
+              recipientId: parsed.recipientId || null,
               username,
               content: parsed.message,
             });
-            this.logger.log(`Message saved to database: ${savedMessage.id} in room ${parsed.room}`);
+
+            const messagePayload = {
+              id: savedMessage.id,
+              username,
+              message: parsed.message,
+              timestamp: savedMessage.createdAt.toISOString(),
+              recipientId: savedMessage.recipientId,
+              userId: savedMessage.userId,
+              authType: clientInfo?.authType,
+            };
+
+            // Отправляем сообщение всем в комнате
+            // Внешнее приложение само фильтрует, кто должен видеть сообщение
+            this.server.to(parsed.room).emit('message', messagePayload);
+
+            this.logger.log(
+              `Message in room "${parsed.room}" from ${username} (${client.id}) to ${parsed.recipientId || 'all'}: ${parsed.message}`,
+            );
           } catch (error) {
             this.logger.error(`Failed to save message to database: ${error.message}`, error.stack);
-            // Продолжаем отправку сообщения даже если сохранение не удалось
+            client.emit('error', { message: 'Failed to send message' });
           }
-
-          this.server.to(parsed.room).emit('message', messagePayload);
-          this.logger.log(
-            `Message in room "${parsed.room}" from ${username} (${client.id}): ${parsed.message}`,
-          );
         } else {
+          const messagePayload = {
+            username,
+            message: parsed.message,
+            timestamp: new Date().toISOString(),
+            authType: clientInfo?.authType,
+          };
           this.server.emit('message', messagePayload);
           this.logger.log(`Message from ${username} (${client.id}): ${parsed.message}`);
         }
@@ -214,33 +234,42 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
       const clientInfo = this.connectedClients.get(client.id);
       const from = clientInfo?.username || clientInfo?.apiKeyId || client.id;
 
-      const messagePayload = {
-        content: parsed.content,
-        from,
-        timestamp: new Date().toISOString(),
-        authType: clientInfo?.authType,
-      };
-
       // Сохраняем сообщение в БД, если указана комната
       if (parsed.room) {
         try {
           const savedMessage = await this.roomsService.createMessage({
             roomId: parsed.room,
             userId: clientInfo?.userId || null,
+            recipientId: null, // Старый формат не поддерживает recipientId
             username: from,
             content: parsed.content,
           });
-          this.logger.debug(`Message saved to database: ${savedMessage.id}`);
+
+          const messagePayload = {
+            id: savedMessage.id,
+            content: parsed.content,
+            from,
+            timestamp: savedMessage.createdAt.toISOString(),
+            recipientId: savedMessage.recipientId,
+            userId: savedMessage.userId,
+            authType: clientInfo?.authType,
+          };
+
+          this.server.to(parsed.room).emit('message', messagePayload);
+          this.logger.log(
+            `Message in room "${parsed.room}" from ${from} (${client.id}): ${parsed.content}`,
+          );
         } catch (error) {
           this.logger.error(`Failed to save message to database: ${error.message}`, error.stack);
-          // Продолжаем отправку сообщения даже если сохранение не удалось
+          client.emit('error', { message: 'Failed to send message' });
         }
-
-        this.server.to(parsed.room).emit('message', messagePayload);
-        this.logger.log(
-          `Message in room "${parsed.room}" from ${from} (${client.id}): ${parsed.content}`,
-        );
       } else {
+        const messagePayload = {
+          content: parsed.content,
+          from,
+          timestamp: new Date().toISOString(),
+          authType: clientInfo?.authType,
+        };
         this.server.emit('message', messagePayload);
         this.logger.log(`Message from ${from} (${client.id}): ${parsed.content}`);
       }
