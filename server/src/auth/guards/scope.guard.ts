@@ -15,10 +15,10 @@ import { hasScope, hasAnyScope, hasAllScopes } from '../scopes/scopes.constants'
 
 /**
  * Guard для проверки прав доступа (scopes) пользователя/API ключа
- * 
+ *
  * Этот guard проверяет, имеет ли пользователь/API ключ необходимые scopes
  * для доступа к защищенному эндпоинту.
- * 
+ *
  * Использование:
  * - Для JWT токенов (обычные пользователи) - scopes не требуются (всегда доступ)
  * - Для API ключей - проверяются scopes из токена
@@ -107,4 +107,3 @@ export class ScopeGuard implements CanActivate {
     return true;
   }
 }
-

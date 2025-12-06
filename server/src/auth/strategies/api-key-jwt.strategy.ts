@@ -60,7 +60,7 @@ export class ApiKeyJwtStrategy extends PassportStrategy(Strategy, 'api-key-jwt')
 
     // Получаем scopes из токена или из базы данных
     let scopes: string[] = payload.scopes || [];
-    
+
     // Если в базе данных есть scopes, используем их (они имеют приоритет)
     if (apiKey.scopes) {
       try {
