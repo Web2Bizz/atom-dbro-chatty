@@ -5,9 +5,10 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { ApiKeyJwtGuard } from './api-key-jwt.guard';
 
 /**
  * Комбинированный guard, который поддерживает оба типа аутентификации:
@@ -17,14 +18,21 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
  * Важно: оба заголовка не могут использоваться одновременно
  */
 @Injectable()
-export class CombinedAuthGuard extends AuthGuard(['jwt', 'api-key-jwt']) {
+export class CombinedAuthGuard {
   private readonly logger = new Logger(CombinedAuthGuard.name);
+  private jwtGuard: JwtAuthGuard;
+  private apiKeyGuard: ApiKeyJwtGuard;
 
-  constructor(private reflector: Reflector) {
-    super();
+  constructor(
+    private reflector: Reflector,
+    jwtGuard: JwtAuthGuard,
+    apiKeyGuard: ApiKeyJwtGuard,
+  ) {
+    this.jwtGuard = jwtGuard;
+    this.apiKeyGuard = apiKeyGuard;
   }
 
-  canActivate(context: ExecutionContext) {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -48,47 +56,64 @@ export class CombinedAuthGuard extends AuthGuard(['jwt', 'api-key-jwt']) {
       );
     }
 
-    return super.canActivate(context);
-  }
-
-  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
-    const request = context.switchToHttp().getRequest();
-
-    // Если один из guards успешно аутентифицировал пользователя, возвращаем его
-    if (user) {
-      return user;
+    // Если есть Bearer токен, используем только JWT guard
+    if (hasAuthorization) {
+      try {
+        const result = await this.jwtGuard.canActivate(context);
+        if (result) {
+          // Убеждаемся, что request.user установлен
+          const user = (request as any).user;
+          if (user) {
+            this.logger.debug(
+              `JWT user authenticated: ${user.userId} - ${request.method} ${request.url}. User object: ${JSON.stringify(user)}`,
+            );
+          } else {
+            this.logger.warn(
+              `JWT authentication succeeded but request.user is not set - ${request.method} ${request.url}`,
+            );
+          }
+        }
+        return result;
+      } catch (error) {
+        this.logger.error(
+          `JWT authentication failed: ${error.message} - ${request.method} ${request.url}`,
+        );
+        throw error;
+      }
     }
 
-    // Проверяем наличие токенов
-    const hasAuthorization =
-      request.headers.authorization && request.headers.authorization.startsWith('Bearer ');
-    const hasApiKey = request.headers['x-api-key'] || request.query?.apiKey;
-
-    if (!hasAuthorization && !hasApiKey) {
-      this.logger.warn(
-        `Authentication required but not provided: ${request.method} ${request.url} from ${request.ip}`,
-      );
-      throw new UnauthorizedException(
-        'Authentication required. Provide either Authorization Bearer token or X-API-Key header.',
-      );
+    // Если есть API ключ, используем только API Key guard
+    if (hasApiKey) {
+      try {
+        const result = await this.apiKeyGuard.canActivate(context);
+        if (result) {
+          // Убеждаемся, что request.user установлен
+          const user = (request as any).user;
+          if (user) {
+            this.logger.debug(
+              `API Key user authenticated: ${user.userId || user.apiKeyId} - ${request.method} ${request.url}. User object: ${JSON.stringify(user)}`,
+            );
+          } else {
+            this.logger.warn(
+              `API Key authentication succeeded but request.user is not set - ${request.method} ${request.url}`,
+            );
+          }
+        }
+        return result;
+      } catch (error) {
+        this.logger.error(
+          `API Key authentication failed: ${error.message} - ${request.method} ${request.url}`,
+        );
+        throw error;
+      }
     }
 
-    // Есть токен, но он невалидный
-    if (err) {
-      this.logger.warn(
-        `Authentication error: ${err.message || 'Unknown error'} - ${request.method} ${request.url} from ${request.ip}`,
-      );
-      throw err;
-    }
-
-    if (info) {
-      this.logger.warn(
-        `Invalid token: ${info.message || 'Unknown error'} - ${request.method} ${request.url} from ${request.ip}`,
-      );
-      throw new UnauthorizedException(info.message || 'Invalid token');
-    }
-
-    this.logger.warn(`Authentication failed: ${request.method} ${request.url} from ${request.ip}`);
-    throw new UnauthorizedException('Authentication failed');
+    // Если нет ни одного токена, требуем аутентификацию
+    this.logger.warn(
+      `Authentication required but not provided: ${request.method} ${request.url} from ${request.ip}`,
+    );
+    throw new UnauthorizedException(
+      'Authentication required. Provide either Authorization Bearer token or X-API-Key header.',
+    );
   }
 }

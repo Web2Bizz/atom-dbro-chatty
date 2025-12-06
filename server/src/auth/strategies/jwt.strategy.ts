@@ -15,25 +15,7 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(private configService: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([
-        (request: any) => {
-          // Проверяем только Authorization Bearer заголовок
-          const authHeader = request.headers.authorization;
-          if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.substring(7);
-            // Проверяем, что это access токен (имеет тип access в payload)
-            try {
-              const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-              if (decoded.type === 'access') {
-                return token;
-              }
-            } catch {
-              // Если не удалось декодировать, пропускаем
-            }
-          }
-          return null;
-        },
-      ]),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET') || 'your-secret-key',
     });

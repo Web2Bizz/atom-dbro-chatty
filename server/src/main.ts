@@ -3,6 +3,7 @@ import { VersioningType, Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { CombinedAuthGuard } from './auth/guards/combined-auth.guard';
+import { ScopeGuard } from './auth/guards/scope.guard';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -33,20 +34,49 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
 
   // Global Authentication Guard (JWT + API Key)
-  const reflector = app.get(Reflector);
-  app.useGlobalGuards(new CombinedAuthGuard(reflector));
+  const combinedAuthGuard = app.get(CombinedAuthGuard);
+  app.useGlobalGuards(combinedAuthGuard);
+
+  // Global Scope Guard (проверка прав доступа для API ключей)
+  const scopeGuard = app.get(ScopeGuard);
+  app.useGlobalGuards(scopeGuard);
 
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Chatty API')
-    .setDescription('Chatty backend API documentation')
+    .setDescription(
+      `Chatty backend API documentation.
+
+## Authentication
+
+API supports two authentication methods:
+
+1. **JWT Bearer Token** - Standard user authentication via \`Authorization: Bearer <token>\` header
+   - Users authenticated via JWT have full access to all endpoints (no scope restrictions)
+
+2. **API Key** - API key authentication via \`X-API-Key\` header
+   - API keys can have specific scopes/permissions that limit their access
+   - Available scopes:
+     - **allow-all**: Full access to all system functions (super permission)
+     - **allow-all-chats**: Access to all chats/rooms in the system, including private ones
+     - **allow-all-users**: Access to all users in the system, including their profiles and data
+
+## Scopes & Permissions
+
+Some endpoints require specific scopes when using API keys:
+- Endpoints marked with scope requirements will check if the API key has the necessary permissions
+- JWT users always have full access regardless of scope requirements
+- If an API key lacks required scopes, a 403 Forbidden error will be returned
+
+See endpoint descriptions for specific scope requirements.`,
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT Access Token or API Key (JWT-based)',
+        description: 'JWT Access Token (users have full access, no scope restrictions)',
         name: 'Authorization',
         in: 'header',
       },
@@ -57,7 +87,8 @@ async function bootstrap() {
         type: 'apiKey',
         name: 'X-API-Key',
         in: 'header',
-        description: 'API Key (JWT-based) in header',
+        description:
+          'API Key (JWT-based). API keys can have scopes that limit their access. Create API keys via POST /api/v1/auth/api-keys',
       },
       'api-key',
     )

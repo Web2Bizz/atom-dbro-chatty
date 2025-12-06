@@ -26,6 +26,8 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { GetApiKey } from '../auth/decorators/api-key.decorator';
 import { ApiKey } from '../database/schema/api-keys';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { RequireScope } from '../auth/scopes/scopes.decorator';
+import { Scope } from '../auth/scopes/scopes.constants';
 import { SocketGateway } from '../socket/socket.gateway';
 import { DATABASE_CONNECTION, Database } from '../database/database.module';
 import { users } from '../database/schema/users';
@@ -56,8 +58,13 @@ export class RoomsController {
   ) {}
 
   @Post()
+  @RequireScope(Scope.ALLOW_ALL_CHATS)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new room' })
+  @ApiOperation({
+    summary: 'Create a new room',
+    description:
+      'Create a new room/chat. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+  })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
   @ApiBody({
@@ -80,6 +87,10 @@ export class RoomsController {
   @ApiResponse({ status: 201, description: 'Room created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+  })
   async create(
     @Body(new ZodValidationPipe(CreateRoomSchema)) body: z.infer<typeof CreateRoomSchema>,
     @GetUser() user?: { userId: string; username?: string },
@@ -100,7 +111,12 @@ export class RoomsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all existing rooms' })
+  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @ApiOperation({
+    summary: 'Get all existing rooms',
+    description:
+      'Get all rooms in the system. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+  })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
   @ApiResponse({
@@ -108,6 +124,10 @@ export class RoomsController {
     description: 'List of all rooms (public only for unauthorized users)',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+  })
   async findAll(
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
@@ -148,16 +168,21 @@ export class RoomsController {
   }
 
   @Get(':id/messages')
+  @RequireScope(Scope.ALLOW_ALL_CHATS)
   @ApiOperation({
     summary: 'Get room messages history',
     description:
-      'Get messages from a room. Use query parameters to filter messages for support chat scenarios.',
+      'Get messages from a room. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access. Use query parameters to filter messages for support chat scenarios.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Room messages history' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+  })
   @ApiResponse({ status: 404, description: 'Room not found' })
   async getRoomMessages(
     @Param('id') id: string,
@@ -183,23 +208,33 @@ export class RoomsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get room by ID' })
+  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @ApiOperation({
+    summary: 'Get room by ID',
+    description:
+      'Get room details by ID. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+  })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Room details' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+  })
   @ApiResponse({ status: 404, description: 'Room not found' })
   async findOne(@Param('id') id: string) {
     return this.roomsService.findOne(id);
   }
 
   @Post(':id/messages')
+  @RequireScope(Scope.ALLOW_ALL_CHATS)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Send a message to a room',
     description:
-      'Send a message to a room. For support chat: set recipientId to target a specific user, or leave null for broadcast to moderators. External application controls who can see messages.',
+      'Send a message to a room. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access. For support chat: set recipientId to target a specific user, or leave null for broadcast to moderators. External application controls who can see messages.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -232,6 +267,10 @@ export class RoomsController {
   @ApiResponse({ status: 201, description: 'Message sent successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - token required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+  })
   @ApiResponse({ status: 404, description: 'Room not found' })
   @UsePipes(new ZodValidationPipe(CreateMessageSchema))
   async sendMessage(

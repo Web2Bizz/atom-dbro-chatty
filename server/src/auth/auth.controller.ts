@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { Public } from './decorators/public.decorator';
 import { GetUser } from './decorators/get-user.decorator';
+import { Scope, validateScopes } from './scopes/scopes.constants';
 import { Request } from 'express';
 
 const LoginSchema = z.object({
@@ -38,7 +39,19 @@ const RefreshTokenSchema = z.object({
 const GenerateApiKeySchema = z.object({
   name: z.string().optional(),
   expiresInDays: z.number().int().positive().optional(),
-  scopes: z.array(z.string()).optional(),
+  scopes: z
+    .array(z.string())
+    .optional()
+    .refine(
+      (scopes) => {
+        if (!scopes || scopes.length === 0) return true;
+        const validScopes = validateScopes(scopes);
+        return validScopes.length === scopes.length;
+      },
+      {
+        message: 'Invalid scopes. Valid scopes are: allow-all, allow-all-chats, allow-all-users',
+      },
+    ),
 });
 
 const RegisterSchema = z.object({
@@ -215,23 +228,41 @@ export class AuthController {
   @Post('api-keys')
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Generate a new API key (requires authentication)' })
+  @ApiOperation({
+    summary: 'Generate a new API key (requires authentication)',
+    description:
+      'Create a new API key with optional scopes/permissions. Scopes define what actions the API key can perform.',
+  })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Optional name for the API key' },
-        expiresInDays: { type: 'number', description: 'Optional expiration in days' },
+        expiresInDays: {
+          type: 'number',
+          description: 'Optional expiration in days (default: never expires)',
+        },
         scopes: {
           type: 'array',
-          items: { type: 'string' },
-          description: 'Optional scopes/permissions',
+          items: {
+            type: 'string',
+            enum: Object.values(Scope),
+            description: 'Scope/permission for the API key',
+          },
+          description: `Optional scopes/permissions. Available scopes:
+- **allow-all**: Full access to all system functions (super permission)
+- **allow-all-chats**: Access to all chats/rooms in the system, including private ones
+- **allow-all-users**: Access to all users in the system, including their profiles and data
+
+If no scopes are provided, the API key will have no special permissions (only basic access).
+Multiple scopes can be specified.`,
+          example: ['allow-all-chats', 'allow-all-users'],
         },
       },
     },
   })
   @ApiResponse({ status: 201, description: 'API key created successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 400, description: 'Invalid input data or invalid scopes' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UsePipes(new ZodValidationPipe(GenerateApiKeySchema))
   async generateApiKey(
@@ -244,6 +275,9 @@ export class AuthController {
       throw new UnauthorizedException('User not authenticated');
     }
 
+    // Валидируем и нормализуем scopes
+    const validatedScopes = data.scopes ? validateScopes(data.scopes) : [];
+
     const ipAddress =
       req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -253,7 +287,7 @@ export class AuthController {
       data.name,
       user.userId, // Автоматически берётся из авторизованного пользователя
       data.expiresInDays,
-      data.scopes,
+      validatedScopes.length > 0 ? validatedScopes : undefined,
       ipAddress,
       userAgent,
     );

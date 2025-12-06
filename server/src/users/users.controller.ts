@@ -11,6 +11,8 @@ import { UsersService } from './users.service';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { NewUser } from '../database/schema/users';
+import { RequireScope } from '../auth/scopes/scopes.decorator';
+import { Scope } from '../auth/scopes/scopes.constants';
 
 // Zod схемы для валидации
 const CreateUserSchema = z.object({
@@ -48,11 +50,20 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all users' })
+  @RequireScope(Scope.ALLOW_ALL_USERS)
+  @ApiOperation({
+    summary: 'Get all users',
+    description:
+      'Get all users in the system. Requires "allow-all-users" or "allow-all" scope for API keys. JWT users have full access.',
+  })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
   @ApiResponse({ status: 200, description: 'List of all users' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - API key does not have required scope (allow-all-users or allow-all)',
+  })
   async findAll() {
     return this.usersService.findAll();
   }

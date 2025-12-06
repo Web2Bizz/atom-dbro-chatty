@@ -274,9 +274,8 @@ export class AuthService {
     // Используем временный ключ, который потом заменим
     const tempKey = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // Устанавливаем permissions по умолчанию
-    const defaultPermissions = ['allow-all'];
-    const permissions = JSON.stringify(defaultPermissions);
+    // Нормализуем scopes - если не переданы, API ключ будет без специальных прав
+    const normalizedScopes = scopes && scopes.length > 0 ? scopes : [];
 
     const [apiKey] = await this.db
       .insert(apiKeys)
@@ -288,8 +287,8 @@ export class AuthService {
         isActive: true,
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
-        scopes: scopes ? JSON.stringify(scopes) : null,
-        permissions: permissions,
+        scopes: normalizedScopes.length > 0 ? JSON.stringify(normalizedScopes) : null,
+        permissions: null, // Не используем permissions, только scopes
       })
       .returning();
 
@@ -298,7 +297,7 @@ export class AuthService {
       sub: apiKey.id,
       userId: userId,
       type: 'api-key',
-      scopes: scopes || [],
+      scopes: normalizedScopes,
     };
 
     const token = this.jwtService.sign(payload, {

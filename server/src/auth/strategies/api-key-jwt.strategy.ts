@@ -58,11 +58,26 @@ export class ApiKeyJwtStrategy extends PassportStrategy(Strategy, 'api-key-jwt')
       throw new UnauthorizedException('API key not found or revoked');
     }
 
+    // Получаем scopes из токена или из базы данных
+    let scopes: string[] = payload.scopes || [];
+    
+    // Если в базе данных есть scopes, используем их (они имеют приоритет)
+    if (apiKey.scopes) {
+      try {
+        const dbScopes = JSON.parse(apiKey.scopes);
+        if (Array.isArray(dbScopes) && dbScopes.length > 0) {
+          scopes = dbScopes;
+        }
+      } catch (error) {
+        // Если не удалось распарсить, используем scopes из токена
+      }
+    }
+
     // Возвращаем объект, который будет доступен как request.user
     return {
       apiKeyId: payload.sub,
       userId: payload.userId || apiKey.userId,
-      scopes: payload.scopes || [],
+      scopes: scopes,
       apiKey,
       type: 'api-key',
     };
