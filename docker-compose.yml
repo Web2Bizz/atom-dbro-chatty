@@ -20,9 +20,10 @@ services:
       retries: 5
 
   server:
+    image: ${DOCKER_IMAGE_SERVER:-chatty-server:latest}
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./Dockerfile
     container_name: chatty-server
     depends_on:
       postgres:
@@ -36,8 +37,17 @@ services:
     ports:
       - '3000:3000'
     restart: unless-stopped
+    networks:
+      - atom-internal-network
+      - atom-external-network
 
 volumes:
   chatty_pg_data:
     driver: local
+
+networks:
+  atom-external-network:
+    external: true
+  atom-internal-network:
+    external: true
 

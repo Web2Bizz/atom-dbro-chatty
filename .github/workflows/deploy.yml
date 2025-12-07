@@ -1,0 +1,446 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME || 'chatty' }}
+  REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image-version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate and prepare environment variables
+        id: validate
+        run: |
+          REGISTRY_URL="${{ env.REGISTRY_URL }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          
+          # Проверяем, что переменные установлены
+          if [ -z "$REGISTRY_URL" ]; then
+            echo "❌ ERROR: REGISTRY_URL is not set or empty"
+            exit 1
+          fi
+          if [ -z "$IMAGE_NAME" ]; then
+            echo "❌ ERROR: IMAGE_NAME is not set or empty"
+            exit 1
+          fi
+          
+          # Удаляем протокол из REGISTRY_URL, если он есть
+          REGISTRY_URL="${REGISTRY_URL#http://}"
+          REGISTRY_URL="${REGISTRY_URL#https://}"
+          REGISTRY_URL="${REGISTRY_URL%/}"
+          
+          # Удаляем пробелы в начале и конце
+          REGISTRY_URL=$(echo "$REGISTRY_URL" | xargs)
+          IMAGE_NAME=$(echo "$IMAGE_NAME" | xargs)
+          
+          # Проверяем, что переменные не пусты после очистки
+          if [ -z "$REGISTRY_URL" ]; then
+            echo "❌ ERROR: REGISTRY_URL is empty after cleaning"
+            exit 1
+          fi
+          if [ -z "$IMAGE_NAME" ]; then
+            echo "❌ ERROR: IMAGE_NAME is empty after cleaning"
+            exit 1
+          fi
+          
+          # Проверяем формат REGISTRY_URL (не должен содержать пробелы)
+          if [[ "$REGISTRY_URL" =~ [[:space:]] ]]; then
+            echo "❌ ERROR: REGISTRY_URL contains spaces: '$REGISTRY_URL'"
+            exit 1
+          fi
+          
+          # Проверяем формат IMAGE_NAME (должен соответствовать Docker naming conventions)
+          # Docker image names: lowercase letters, numbers, dots, dashes, underscores
+          # Must start and end with alphanumeric character
+          if [[ ! "$IMAGE_NAME" =~ ^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$ ]]; then
+            echo "❌ ERROR: IMAGE_NAME has invalid format: '$IMAGE_NAME'"
+            echo "Image name must contain only lowercase letters, numbers, dots, dashes, and underscores"
+            echo "Must start and end with alphanumeric character"
+            exit 1
+          fi
+          
+          # Выводим значения для отладки (маскируем чувствительные данные)
+          echo "✅ REGISTRY_URL length: ${#REGISTRY_URL} characters"
+          echo "✅ IMAGE_NAME: $IMAGE_NAME"
+          
+          # Сохраняем очищенные значения для использования
+          echo "registry_url=$REGISTRY_URL" >> $GITHUB_OUTPUT
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Generate image version from date
+        id: version
+        run: |
+          # Формат: YYYY-MM-DD-HHMMSS (UTC)
+          VERSION=$(date -u +"%Y-%m-%d-%H%M%S")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Image version: $VERSION"
+          
+          # Валидация формата версии
+          if [[ ! "$VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}$ ]]; then
+            echo "❌ ERROR: Invalid version format: $VERSION"
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+      - name: Prepare image tags
+        id: tags
+        run: |
+          REGISTRY_URL="${{ steps.validate.outputs.registry_url }}"
+          IMAGE_NAME="${{ steps.validate.outputs.image_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Удаляем протокол из REGISTRY_URL, если он есть
+          REGISTRY_URL="${REGISTRY_URL#http://}"
+          REGISTRY_URL="${REGISTRY_URL#https://}"
+          REGISTRY_URL="${REGISTRY_URL%/}"
+          
+          # Удаляем пробелы
+          REGISTRY_URL=$(echo "$REGISTRY_URL" | xargs)
+          IMAGE_NAME=$(echo "$IMAGE_NAME" | xargs)
+          
+          # Формируем теги
+          TAG_VERSION="$REGISTRY_URL/$IMAGE_NAME:$VERSION"
+          TAG_LATEST="$REGISTRY_URL/$IMAGE_NAME:latest"
+          
+          # Проверяем формат тегов перед использованием
+          echo "🔍 Validating image tags..."
+          echo "REGISTRY_URL: '$REGISTRY_URL' (length: ${#REGISTRY_URL})"
+          echo "IMAGE_NAME: '$IMAGE_NAME' (length: ${#IMAGE_NAME})"
+          echo "VERSION: '$VERSION'"
+          echo "TAG_VERSION: '$TAG_VERSION'"
+          echo "TAG_LATEST: '$TAG_LATEST'"
+          
+          # Проверяем, что теги не пусты
+          if [ -z "$TAG_VERSION" ] || [ -z "$TAG_LATEST" ]; then
+            echo "❌ ERROR: One or more tags are empty"
+            exit 1
+          fi
+          
+          # Проверяем базовый формат (не должен содержать двойные слеши или пробелы)
+          if [[ "$TAG_VERSION" =~ // ]] || [[ "$TAG_VERSION" =~ [[:space:]] ]]; then
+            echo "❌ ERROR: Invalid tag format: '$TAG_VERSION'"
+            exit 1
+          fi
+          
+          if [[ "$TAG_LATEST" =~ // ]] || [[ "$TAG_LATEST" =~ [[:space:]] ]]; then
+            echo "❌ ERROR: Invalid tag format: '$TAG_LATEST'"
+            exit 1
+          fi
+          
+          # Сохраняем теги
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_latest=$TAG_LATEST" >> $GITHUB_OUTPUT
+          echo "registry_url=$REGISTRY_URL" >> $GITHUB_OUTPUT
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.tag_version }}
+            ${{ steps.tags.outputs.tag_latest }}
+          cache-from: type=registry,ref=${{ steps.tags.outputs.registry_url }}/${{ steps.tags.outputs.image_name }}:buildcache
+          cache-to: type=registry,ref=${{ steps.tags.outputs.registry_url }}/${{ steps.tags.outputs.image_name }}:buildcache,mode=max
+
+      - name: Output image info
+        run: |
+          echo "✅ Image pushed successfully"
+          echo "📦 Version tag: ${{ steps.tags.outputs.tag_version }}"
+          echo "📦 Latest tag: ${{ steps.tags.outputs.tag_latest }}"
+          echo "🔗 Full image version: ${{ steps.tags.outputs.tag_version }}"
+          echo "🔗 Full image latest: ${{ steps.tags.outputs.tag_latest }}"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up Docker resources..."
+          docker builder prune -f || true
+          echo "✅ Cleanup completed"
+  deploy:
+    name: Deploy Application
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy application
+        run: |
+          SSH_PORT="${DEPLOY_SSH_PORT:-22}"
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "export REGISTRY_URL='$REGISTRY_URL' REGISTRY_USERNAME='$REGISTRY_USERNAME' REGISTRY_PASSWORD='$REGISTRY_PASSWORD' PROJECT_DIR_VALUE='$PROJECT_DIR_VALUE' CONTAINER_NAME='$CONTAINER_NAME' IMAGE_NAME='$IMAGE_NAME' SERVICE_NAME='$SERVICE_NAME' COMPOSE_PROJECT_NAME='$COMPOSE_PROJECT_NAME' IMAGE_VERSION='$IMAGE_VERSION'; bash -s" << 'REMOTE_SCRIPT'
+            set -e
+            
+            REGISTRY_URL="${REGISTRY_URL}"
+            REGISTRY_USERNAME="${REGISTRY_USERNAME}"
+            REGISTRY_PASSWORD="${REGISTRY_PASSWORD}"
+            IMAGE_NAME="${IMAGE_NAME:-chatty}"
+            IMAGE_VERSION="${IMAGE_VERSION:-latest}"
+            PROJECT_DIR="$PROJECT_DIR_VALUE"
+            CONTAINER_NAME="${CONTAINER_NAME:-chatty-server}"
+            SERVICE_NAME="${SERVICE_NAME:-server}"
+            COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-}"
+            
+            # Проверяем, что переменная PROJECT_DIR установлена
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "❌ ERROR: PROJECT_DIR is not set"
+              exit 1
+            fi
+            
+            # Проверяем, что переменные Docker Registry установлены
+            if [ -z "$REGISTRY_URL" ]; then
+              echo "❌ ERROR: REGISTRY_URL is not set"
+              exit 1
+            fi
+            if [ -z "$REGISTRY_USERNAME" ]; then
+              echo "❌ ERROR: REGISTRY_USERNAME is not set"
+              exit 1
+            fi
+            if [ -z "$REGISTRY_PASSWORD" ]; then
+              echo "❌ ERROR: REGISTRY_PASSWORD is not set"
+              exit 1
+            fi
+            
+            # Нормализуем REGISTRY_URL (удаляем протокол и trailing slash)
+            REGISTRY_URL="${REGISTRY_URL#http://}"
+            REGISTRY_URL="${REGISTRY_URL#https://}"
+            REGISTRY_URL="${REGISTRY_URL%/}"
+            REGISTRY_URL=$(echo "$REGISTRY_URL" | xargs)
+            
+            # Проверяем формат после нормализации
+            if [ -z "$REGISTRY_URL" ]; then
+              echo "❌ ERROR: REGISTRY_URL is empty after normalization"
+              exit 1
+            fi
+            
+            if [[ "$REGISTRY_URL" =~ [[:space:]] ]] || [[ "$REGISTRY_URL" =~ // ]]; then
+              echo "❌ ERROR: Invalid REGISTRY_URL format: '$REGISTRY_URL'"
+              exit 1
+            fi
+            
+            # Логин в Docker Registry
+            echo "🔐 Logging in to Docker Registry: $REGISTRY_URL"
+            echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY_URL" -u "$REGISTRY_USERNAME" --password-stdin
+            
+            # Полный путь к образу
+            FULL_IMAGE_NAME="$REGISTRY_URL/$IMAGE_NAME:$IMAGE_VERSION"
+            
+            # Проверяем формат тега перед использованием
+            if [[ "$FULL_IMAGE_NAME" =~ [[:space:]] ]] || [[ "$FULL_IMAGE_NAME" =~ // ]]; then
+              echo "❌ ERROR: Invalid image tag format: '$FULL_IMAGE_NAME'"
+              echo "REGISTRY_URL: '$REGISTRY_URL'"
+              echo "IMAGE_NAME: '$IMAGE_NAME'"
+              echo "IMAGE_VERSION: '$IMAGE_VERSION'"
+              exit 1
+            fi
+            
+            echo "📦 Pulling image: $FULL_IMAGE_NAME"
+            
+            # Загружаем образ из Registry
+            if ! docker pull "$FULL_IMAGE_NAME"; then
+              echo "❌ ERROR: Failed to pull image from Registry: $FULL_IMAGE_NAME"
+              exit 1
+            fi
+            
+            # Проверяем, что образ загружен (используем docker inspect для надежности)
+            if ! docker inspect "$FULL_IMAGE_NAME" > /dev/null 2>&1; then
+              echo "❌ ERROR: Image was not pulled successfully: $FULL_IMAGE_NAME"
+              echo "Available images:"
+              docker images | head -10
+              exit 1
+            fi
+            
+            # Тегируем локально для docker-compose
+            docker tag "$FULL_IMAGE_NAME" "$IMAGE_NAME:latest"
+            echo "✅ Image tagged as $IMAGE_NAME:latest"
+            
+            # Переходим в директорию проекта
+            echo "📁 Changing to project directory: $PROJECT_DIR"
+            cd "$PROJECT_DIR" || {
+              echo "❌ ERROR: Failed to change to project directory: $PROJECT_DIR"
+              exit 1
+            }
+            
+            # Проверяем, что docker-compose.yml существует
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "❌ ERROR: docker-compose.yml not found in $PROJECT_DIR"
+              echo "Current directory: $(pwd)"
+              echo "Files in directory:"
+              ls -la || true
+              exit 1
+            fi
+            
+            echo "✅ Found docker-compose.yml in $(pwd)"
+            
+            # Очищаем старые версии образа перед деплоем
+            echo "🧹 Removing old image versions (if any)..."
+            docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}} {{.ID}}" | \
+              grep -v "latest" | \
+              awk '{print $2}' | \
+              xargs -r docker rmi -f || echo "No old image versions to remove"
+            
+            # Создание необходимых сетей Docker (если не существуют)
+            echo "🌐 Ensuring Docker networks exist..."
+            docker network create atom-external-network 2>/dev/null || echo "Network atom-external-network already exists"
+            docker network create atom-internal-network 2>/dev/null || echo "Network atom-internal-network already exists"
+            
+            # Устанавливаем переменные для docker-compose
+            export DOCKER_IMAGE_SERVER="$IMAGE_NAME:latest"
+            echo "✅ DOCKER_IMAGE_SERVER environment variable set to: $DOCKER_IMAGE_SERVER"
+            
+            # Устанавливаем имя проекта (стек) для docker-compose, если указано
+            if [ -n "$COMPOSE_PROJECT_NAME" ]; then
+              export COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME"
+              echo "✅ COMPOSE_PROJECT_NAME set to: $COMPOSE_PROJECT_NAME"
+            else
+              echo "ℹ️ COMPOSE_PROJECT_NAME not set, using default (directory name)"
+            fi
+            
+            COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
+            
+            # Останавливаем и удаляем существующие контейнеры (если существуют)
+            echo "🛑 Stopping existing containers..."
+            docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} down --remove-orphans || echo "No containers to stop"
+            
+            # Запускаем сервисы с новым образом
+            echo "▶️ Starting services with docker compose..."
+            echo "Command: docker compose -f '$COMPOSE_FILE' ${COMPOSE_PROJECT_NAME:+-p '$COMPOSE_PROJECT_NAME'} up -d --pull never"
+            
+            if [ -n "$COMPOSE_PROJECT_NAME" ]; then
+              docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --pull never
+            else
+              docker compose -f "$COMPOSE_FILE" up -d --pull never
+            fi
+            
+            # Проверяем, что контейнеры запустились
+            echo "🔍 Checking container status..."
+            sleep 5
+            
+            if ! docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} ps | grep -q "Up"; then
+              echo "❌ ERROR: Some containers failed to start"
+              echo "Container status:"
+              docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} ps
+              exit 1
+            fi
+            
+            echo "✅ Containers started successfully"
+            
+            # Ожидание готовности контейнера сервера
+            echo "⏳ Waiting for server container to be ready..."
+            MAX_CONTAINER_WAIT_ATTEMPTS=30
+            CONTAINER_WAIT_ATTEMPT=0
+            CONTAINER_READY=false
+            
+            while [ $CONTAINER_WAIT_ATTEMPT -lt $MAX_CONTAINER_WAIT_ATTEMPTS ]; do
+              if docker ps | grep -q "$CONTAINER_NAME" && docker exec "$CONTAINER_NAME" echo "Container is ready" > /dev/null 2>&1; then
+                CONTAINER_READY=true
+                echo "✅ Server container is ready and accepting commands"
+                break
+              fi
+              CONTAINER_WAIT_ATTEMPT=$((CONTAINER_WAIT_ATTEMPT + 1))
+              if [ $CONTAINER_WAIT_ATTEMPT -lt $MAX_CONTAINER_WAIT_ATTEMPTS ]; then
+                echo "Waiting for server container to be ready... ($CONTAINER_WAIT_ATTEMPT/$MAX_CONTAINER_WAIT_ATTEMPTS)"
+                sleep 2
+              fi
+            done
+            
+            if [ "$CONTAINER_READY" != true ]; then
+              echo "❌ Server container failed to start or is not ready"
+              echo "📋 Container status:"
+              docker ps -a | grep "$CONTAINER_NAME" || echo "Container not found"
+              echo "📋 Container logs:"
+              docker logs "$CONTAINER_NAME" --tail 50 || true
+              exit 1
+            fi
+            
+            # Даем приложению время на полный запуск
+            echo "⏳ Waiting for application to fully start (10 seconds)..."
+            sleep 10
+            
+            # Выполнение миграций базы данных
+            echo "🗄️ Running database migrations..."
+            MAX_MIGRATION_ATTEMPTS=3
+            MIGRATION_ATTEMPT=0
+            MIGRATION_SUCCESS=false
+            
+            while [ $MIGRATION_ATTEMPT -lt $MAX_MIGRATION_ATTEMPTS ]; do
+              if docker exec "$CONTAINER_NAME" pnpm run db:migrate 2>&1; then
+                MIGRATION_SUCCESS=true
+                echo "✅ Database migrations completed successfully"
+                break
+              else
+                MIGRATION_ATTEMPT=$((MIGRATION_ATTEMPT + 1))
+                if [ $MIGRATION_ATTEMPT -lt $MAX_MIGRATION_ATTEMPTS ]; then
+                  echo "⚠️ Migration attempt $MIGRATION_ATTEMPT failed, retrying in 5 seconds..."
+                  echo "📋 Recent container logs:"
+                  docker logs "$CONTAINER_NAME" --tail 20 2>&1 | tail -5 || true
+                  sleep 5
+                else
+                  echo "❌ Database migrations failed after $MAX_MIGRATION_ATTEMPTS attempts"
+                  echo "📋 Container logs:"
+                  docker logs "$CONTAINER_NAME" --tail 50 || true
+                  exit 1
+                fi
+              fi
+            done
+            
+            # Очистка неиспользуемых Docker ресурсов (для экономии места)
+            echo "🧹 Cleaning up unused Docker resources..."
+            echo "📊 Disk usage before cleanup:"
+            df -h / | tail -1 || true
+            
+            # Удаляем старые версии образа (если есть)
+            docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}} {{.ID}}" | \
+              grep -v "latest" | \
+              awk '{print $2}' | \
+              xargs -r docker rmi -f || true
+            
+            # Полная очистка неиспользуемых ресурсов (без volumes для безопасности)
+            docker system prune -a -f || echo "⚠️ Warning: Some resources could not be cleaned up"
+            
+            echo "📊 Disk usage after cleanup:"
+            df -h / | tail -1 || true
+            
+            echo "✅ Deployment completed successfully!"
+          REMOTE_SCRIPT
+        env:
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+          REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
+          REGISTRY_USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          PROJECT_DIR_VALUE: ${{ secrets.DEPLOY_PROJECT_PATH }}
+          CONTAINER_NAME: ${{ secrets.DEPLOY_CONTAINER_NAME || 'chatty-server' }}
+          SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME || 'server' }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_VERSION: ${{ needs.build-and-push.outputs.image-version }}
+          COMPOSE_PROJECT_NAME: ${{ secrets.DEPLOY_COMPOSE_PROJECT_NAME || '' }}
