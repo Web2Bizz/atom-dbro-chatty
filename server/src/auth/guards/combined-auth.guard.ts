@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { firstValueFrom, isObservable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiKeyJwtGuard } from './api-key-jwt.guard';
@@ -30,6 +31,19 @@ export class CombinedAuthGuard {
   ) {
     this.jwtGuard = jwtGuard;
     this.apiKeyGuard = apiKeyGuard;
+  }
+
+  /**
+   * Нормализует результат canActivate в Promise<boolean>
+   * Обрабатывает случаи: boolean, Promise<boolean>, Observable<boolean>
+   */
+  private async normalizeGuardResult(
+    result: boolean | Promise<boolean> | import('rxjs').Observable<boolean>,
+  ): Promise<boolean> {
+    if (isObservable(result)) {
+      return firstValueFrom(result);
+    }
+    return Promise.resolve(result);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -59,8 +73,9 @@ export class CombinedAuthGuard {
     // Если есть Bearer токен, используем только JWT guard
     if (hasAuthorization) {
       try {
-        const result = await this.jwtGuard.canActivate(context);
-        if (result) {
+        const result = this.jwtGuard.canActivate(context);
+        const normalizedResult = await this.normalizeGuardResult(result);
+        if (normalizedResult) {
           // Убеждаемся, что request.user установлен
           const user = (request as any).user;
           if (user) {
@@ -73,7 +88,7 @@ export class CombinedAuthGuard {
             );
           }
         }
-        return result;
+        return normalizedResult;
       } catch (error) {
         this.logger.error(
           `JWT authentication failed: ${error.message} - ${request.method} ${request.url}`,
@@ -85,8 +100,9 @@ export class CombinedAuthGuard {
     // Если есть API ключ, используем только API Key guard
     if (hasApiKey) {
       try {
-        const result = await this.apiKeyGuard.canActivate(context);
-        if (result) {
+        const result = this.apiKeyGuard.canActivate(context);
+        const normalizedResult = await this.normalizeGuardResult(result);
+        if (normalizedResult) {
           // Убеждаемся, что request.user установлен
           const user = (request as any).user;
           if (user) {
@@ -99,7 +115,7 @@ export class CombinedAuthGuard {
             );
           }
         }
-        return result;
+        return normalizedResult;
       } catch (error) {
         this.logger.error(
           `API Key authentication failed: ${error.message} - ${request.method} ${request.url}`,
