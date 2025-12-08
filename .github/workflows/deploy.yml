@@ -198,7 +198,19 @@ jobs:
       - name: Deploy application
         run: |
           SSH_PORT="${DEPLOY_SSH_PORT:-22}"
-          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "export REGISTRY_URL='$REGISTRY_URL' REGISTRY_USERNAME='$REGISTRY_USERNAME' REGISTRY_PASSWORD='$REGISTRY_PASSWORD' PROJECT_DIR_VALUE='$PROJECT_DIR_VALUE' CONTAINER_NAME='$CONTAINER_NAME' IMAGE_NAME='$IMAGE_NAME' SERVICE_NAME='$SERVICE_NAME' COMPOSE_PROJECT_NAME='$COMPOSE_PROJECT_NAME' IMAGE_VERSION='$IMAGE_VERSION'; bash -s" << 'REMOTE_SCRIPT'
+          # Экранируем переменные для безопасной передачи через SSH
+          export REGISTRY_URL_ESC=$(printf '%q' "$REGISTRY_URL")
+          export REGISTRY_USERNAME_ESC=$(printf '%q' "$REGISTRY_USERNAME")
+          export REGISTRY_PASSWORD_ESC=$(printf '%q' "$REGISTRY_PASSWORD")
+          export PROJECT_DIR_VALUE_ESC=$(printf '%q' "$PROJECT_DIR_VALUE")
+          export CONTAINER_NAME_ESC=$(printf '%q' "$CONTAINER_NAME")
+          export IMAGE_NAME_ESC=$(printf '%q' "$IMAGE_NAME")
+          export SERVICE_NAME_ESC=$(printf '%q' "$SERVICE_NAME")
+          export COMPOSE_PROJECT_NAME_ESC=$(printf '%q' "$COMPOSE_PROJECT_NAME")
+          export IMAGE_VERSION_ESC=$(printf '%q' "$IMAGE_VERSION")
+          
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "export REGISTRY_URL=${REGISTRY_URL_ESC} REGISTRY_USERNAME=${REGISTRY_USERNAME_ESC} REGISTRY_PASSWORD=${REGISTRY_PASSWORD_ESC} PROJECT_DIR_VALUE=${PROJECT_DIR_VALUE_ESC} CONTAINER_NAME=${CONTAINER_NAME_ESC} IMAGE_NAME=${IMAGE_NAME_ESC} SERVICE_NAME=${SERVICE_NAME_ESC} COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME_ESC} IMAGE_VERSION=${IMAGE_VERSION_ESC}; bash -s" << 'REMOTE_SCRIPT'
             set -e
             
             REGISTRY_URL="${REGISTRY_URL}"
@@ -394,7 +406,7 @@ jobs:
             MIGRATION_SUCCESS=false
             
             while [ $MIGRATION_ATTEMPT -lt $MAX_MIGRATION_ATTEMPTS ]; do
-              if docker exec "$CONTAINER_NAME" pnpm run db:migrate 2>&1; then
+              if docker exec "$CONTAINER_NAME" npm run db:migrate 2>&1; then
                 MIGRATION_SUCCESS=true
                 echo "✅ Database migrations completed successfully"
                 break
