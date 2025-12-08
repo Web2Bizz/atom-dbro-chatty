@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME || 'chatty' }}
+  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME || 'atom-dbro-backend' }}
   REGISTRY_URL: ${{ secrets.DOCKER_REGISTRY_URL }}
 
 jobs:
@@ -109,8 +109,8 @@ jobs:
       - name: Prepare image tags
         id: tags
         run: |
-          REGISTRY_URL="${{ steps.validate.outputs.registry_url }}"
-          IMAGE_NAME="${{ steps.validate.outputs.image_name }}"
+          REGISTRY_URL="${{ env.REGISTRY_URL }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
           VERSION="${{ steps.version.outputs.version }}"
           
           # Удаляем протокол из REGISTRY_URL, если он есть
@@ -198,32 +198,17 @@ jobs:
       - name: Deploy application
         run: |
           SSH_PORT="${DEPLOY_SSH_PORT:-22}"
-          # Экранируем переменные для безопасной передачи через SSH
-          REGISTRY_URL_ESC=$(printf '%q' "$REGISTRY_URL")
-          REGISTRY_USERNAME_ESC=$(printf '%q' "$REGISTRY_USERNAME")
-          REGISTRY_PASSWORD_ESC=$(printf '%q' "$REGISTRY_PASSWORD")
-          PROJECT_DIR_VALUE_ESC=$(printf '%q' "$PROJECT_DIR_VALUE")
-          CONTAINER_NAME_ESC=$(printf '%q' "$CONTAINER_NAME")
-          IMAGE_NAME_ESC=$(printf '%q' "$IMAGE_NAME")
-          SERVICE_NAME_ESC=$(printf '%q' "$SERVICE_NAME")
-          COMPOSE_PROJECT_NAME_ESC=$(printf '%q' "$COMPOSE_PROJECT_NAME")
-          IMAGE_VERSION_ESC=$(printf '%q' "$IMAGE_VERSION")
-          
-          # Формируем команду export для передачи переменных
-          EXPORT_CMD="export REGISTRY_URL=${REGISTRY_URL_ESC} REGISTRY_USERNAME=${REGISTRY_USERNAME_ESC} REGISTRY_PASSWORD=${REGISTRY_PASSWORD_ESC} PROJECT_DIR_VALUE=${PROJECT_DIR_VALUE_ESC} CONTAINER_NAME=${CONTAINER_NAME_ESC} IMAGE_NAME=${IMAGE_NAME_ESC} SERVICE_NAME=${SERVICE_NAME_ESC} COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME_ESC} IMAGE_VERSION=${IMAGE_VERSION_ESC}"
-          
-          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "${EXPORT_CMD}; bash -s" << 'REMOTE_SCRIPT'
-            set -e
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "export REGISTRY_URL='$REGISTRY_URL' REGISTRY_USERNAME='$REGISTRY_USERNAME' REGISTRY_PASSWORD='$REGISTRY_PASSWORD' PROJECT_DIR_VALUE='$PROJECT_DIR_VALUE' CONTAINER_NAME='$CONTAINER_NAME' IMAGE_NAME='$IMAGE_NAME' SERVICE_NAME='$SERVICE_NAME' COMPOSE_PROJECT_NAME='$COMPOSE_PROJECT_NAME' IMAGE_VERSION='$IMAGE_VERSION'; bash -s" << 'REMOTE_SCRIPT'
             set -e
             
             REGISTRY_URL="${REGISTRY_URL}"
             REGISTRY_USERNAME="${REGISTRY_USERNAME}"
             REGISTRY_PASSWORD="${REGISTRY_PASSWORD}"
-            IMAGE_NAME="${IMAGE_NAME:-chatty}"
+            IMAGE_NAME="${IMAGE_NAME:-atom-dbro-backend}"
             IMAGE_VERSION="${IMAGE_VERSION:-latest}"
             PROJECT_DIR="$PROJECT_DIR_VALUE"
-            CONTAINER_NAME="${CONTAINER_NAME:-chatty-server}"
-            SERVICE_NAME="${SERVICE_NAME:-server}"
+            CONTAINER_NAME="${CONTAINER_NAME:-atom-dbro-app}"
+            SERVICE_NAME="${SERVICE_NAME:-app}"
             COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-}"
             
             # Проверяем, что переменная PROJECT_DIR установлена
@@ -329,9 +314,37 @@ jobs:
             docker network create atom-external-network 2>/dev/null || echo "Network atom-external-network already exists"
             docker network create atom-internal-network 2>/dev/null || echo "Network atom-internal-network already exists"
             
+            # Перезапуск только контейнера приложения с новым образом
+            echo "🔄 Restarting application container with new image..."
+            echo "Working directory: $(pwd)"
+            echo "Container name: $CONTAINER_NAME"
+            echo "Service name: $SERVICE_NAME"
+            echo "Docker image: $IMAGE_NAME:latest"
+            
+            # Убеждаемся, что мы в правильной директории
+            if [ "$(pwd)" != "$PROJECT_DIR" ]; then
+              echo "⚠️ Warning: Not in project directory, changing to $PROJECT_DIR"
+              cd "$PROJECT_DIR" || exit 1
+            fi
+            
+            # Проверяем, что docker-compose.yml существует
+            COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              echo "❌ ERROR: docker-compose.yml not found at $COMPOSE_FILE"
+              exit 1
+            fi
+            
+            # Проверяем, что docker-compose.yml содержит указанный сервис
+            if ! grep -q "^  $SERVICE_NAME:" "$COMPOSE_FILE"; then
+              echo "❌ ERROR: Service '$SERVICE_NAME' not found in docker-compose.yml"
+              echo "Available services:"
+              grep -E "^  [a-zA-Z-]+:" "$COMPOSE_FILE" || echo "No services found"
+              exit 1
+            fi
+            
             # Устанавливаем переменные для docker-compose
-            export DOCKER_IMAGE_SERVER="$IMAGE_NAME:latest"
-            echo "✅ DOCKER_IMAGE_SERVER environment variable set to: $DOCKER_IMAGE_SERVER"
+            export DOCKER_IMAGE="$IMAGE_NAME:latest"
+            echo "✅ DOCKER_IMAGE environment variable set to: $DOCKER_IMAGE"
             
             # Устанавливаем имя проекта (стек) для docker-compose, если указано
             if [ -n "$COMPOSE_PROJECT_NAME" ]; then
@@ -341,56 +354,71 @@ jobs:
               echo "ℹ️ COMPOSE_PROJECT_NAME not set, using default (directory name)"
             fi
             
-            COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
-            
-            # Останавливаем и удаляем существующие контейнеры (если существуют)
-            echo "🛑 Stopping existing containers..."
-            docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} down --remove-orphans || echo "No containers to stop"
-            
-            # Запускаем сервисы с новым образом
-            echo "▶️ Starting services with docker compose..."
-            echo "Command: docker compose -f '$COMPOSE_FILE' ${COMPOSE_PROJECT_NAME:+-p '$COMPOSE_PROJECT_NAME'} up -d --pull never"
-            
-            if [ -n "$COMPOSE_PROJECT_NAME" ]; then
-              docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --pull never
+            # Останавливаем и удаляем только контейнер приложения (если существует)
+            if docker ps -a --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+              echo "🛑 Stopping existing container: $CONTAINER_NAME"
+              docker stop "$CONTAINER_NAME" 2>/dev/null || true
+              echo "🗑️ Removing existing container: $CONTAINER_NAME"
+              docker rm "$CONTAINER_NAME" 2>/dev/null || true
             else
-              docker compose -f "$COMPOSE_FILE" up -d --pull never
+              echo "ℹ️ Container $CONTAINER_NAME does not exist, will be created"
             fi
             
-            # Проверяем, что контейнеры запустились
-            echo "🔍 Checking container status..."
-            sleep 5
-            
-            if ! docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} ps | grep -q "Up"; then
-              echo "❌ ERROR: Some containers failed to start"
-              echo "Container status:"
-              docker compose -f "$COMPOSE_FILE" ${COMPOSE_PROJECT_NAME:+-p "$COMPOSE_PROJECT_NAME"} ps
+            # Проверяем, что образ существует
+            if ! docker images | grep -q "$IMAGE_NAME.*latest"; then
+              echo "❌ ERROR: Docker image $IMAGE_NAME:latest not found"
+              echo "Available images:"
+              docker images | head -10
               exit 1
             fi
             
-            echo "✅ Containers started successfully"
+            # Запускаем только указанный сервис с новым образом
+            # --force-recreate: пересоздает контейнер даже если конфигурация не изменилась
+            # --no-deps: не запускает зависимости
+            # --pull never: не пытается скачать образ (он уже загружен)
+            # -p или --project-name: явно указываем имя проекта (стек)
+            echo "▶️ Starting service '$SERVICE_NAME' with docker compose..."
             
-            # Ожидание готовности контейнера сервера
-            echo "⏳ Waiting for server container to be ready..."
+            if [ -n "$COMPOSE_PROJECT_NAME" ]; then
+              echo "Command: docker compose -f '$COMPOSE_FILE' -p '$COMPOSE_PROJECT_NAME' up -d --force-recreate --no-deps --pull never '$SERVICE_NAME'"
+              docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --force-recreate --no-deps --pull never "$SERVICE_NAME"
+            else
+              echo "Command: docker compose -f '$COMPOSE_FILE' up -d --force-recreate --no-deps --pull never '$SERVICE_NAME'"
+              docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps --pull never "$SERVICE_NAME"
+            fi
+            
+            # Проверяем, что контейнер запустился
+            if ! docker ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+              echo "❌ ERROR: Container $CONTAINER_NAME failed to start"
+              echo "Container status:"
+              docker ps -a | grep "$CONTAINER_NAME" || echo "Container not found"
+              exit 1
+            fi
+            
+            echo "✅ Container $CONTAINER_NAME started successfully"
+            
+            # Ожидание готовности контейнера
+            echo "⏳ Waiting for application container to be ready..."
             MAX_CONTAINER_WAIT_ATTEMPTS=30
             CONTAINER_WAIT_ATTEMPT=0
             CONTAINER_READY=false
             
             while [ $CONTAINER_WAIT_ATTEMPT -lt $MAX_CONTAINER_WAIT_ATTEMPTS ]; do
+              # Проверяем, что контейнер запущен и работает
               if docker ps | grep -q "$CONTAINER_NAME" && docker exec "$CONTAINER_NAME" echo "Container is ready" > /dev/null 2>&1; then
                 CONTAINER_READY=true
-                echo "✅ Server container is ready and accepting commands"
+                echo "✅ Container is ready and accepting commands"
                 break
               fi
               CONTAINER_WAIT_ATTEMPT=$((CONTAINER_WAIT_ATTEMPT + 1))
               if [ $CONTAINER_WAIT_ATTEMPT -lt $MAX_CONTAINER_WAIT_ATTEMPTS ]; then
-                echo "Waiting for server container to be ready... ($CONTAINER_WAIT_ATTEMPT/$MAX_CONTAINER_WAIT_ATTEMPTS)"
+                echo "Waiting for container to be ready... ($CONTAINER_WAIT_ATTEMPT/$MAX_CONTAINER_WAIT_ATTEMPTS)"
                 sleep 2
               fi
             done
             
             if [ "$CONTAINER_READY" != true ]; then
-              echo "❌ Server container failed to start or is not ready"
+              echo "❌ Application container failed to start or is not ready"
               echo "📋 Container status:"
               docker ps -a | grep "$CONTAINER_NAME" || echo "Container not found"
               echo "📋 Container logs:"
@@ -409,6 +437,8 @@ jobs:
             MIGRATION_SUCCESS=false
             
             while [ $MIGRATION_ATTEMPT -lt $MAX_MIGRATION_ATTEMPTS ]; do
+              # Используем стандартную команду drizzle-kit migrate
+              # Она автоматически проверяет _journal.json и применяет только новые миграции
               if docker exec "$CONTAINER_NAME" npm run db:migrate 2>&1; then
                 MIGRATION_SUCCESS=true
                 echo "✅ Database migrations completed successfully"
@@ -441,6 +471,7 @@ jobs:
               xargs -r docker rmi -f || true
             
             # Полная очистка неиспользуемых ресурсов (без volumes для безопасности)
+            # Удаляет: остановленные контейнеры, неиспользуемые образы, build cache, сети
             docker system prune -a -f || echo "⚠️ Warning: Some resources could not be cleaned up"
             
             echo "📊 Disk usage after cleanup:"
@@ -454,8 +485,8 @@ jobs:
           REGISTRY_USERNAME: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
           PROJECT_DIR_VALUE: ${{ secrets.DEPLOY_PROJECT_PATH }}
-          CONTAINER_NAME: ${{ secrets.DEPLOY_CONTAINER_NAME || 'chatty-server' }}
-          SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME || 'server' }}
+          CONTAINER_NAME: ${{ secrets.DEPLOY_CONTAINER_NAME || 'atom-dbro-app' }}
+          SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME || 'app' }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           IMAGE_VERSION: ${{ needs.build-and-push.outputs.image-version }}
           COMPOSE_PROJECT_NAME: ${{ secrets.DEPLOY_COMPOSE_PROJECT_NAME || '' }}
