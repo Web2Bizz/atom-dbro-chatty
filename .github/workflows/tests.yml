@@ -22,10 +22,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies in frontend
+        run: cd frontend && npm install
 
-      - name: Build application
-        run: npm run build
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Install dependencies in server
+        run: cd server && npm install
+
+      - name: Build server
+        run: cd server && npm run build
 
 
