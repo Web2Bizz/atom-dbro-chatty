@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { z } from 'zod';
 
 /**
  * Пример использования zod-openapi для генерации OpenAPI документации

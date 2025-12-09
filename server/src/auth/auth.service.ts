@@ -9,8 +9,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DATABASE_CONNECTION, Database } from '../database/database.module';
-import { apiKeys, ApiKey, NewApiKey } from '../database/schema/api-keys';
-import { refreshTokens, RefreshToken, NewRefreshToken } from '../database/schema/refresh-tokens';
+import { apiKeys, ApiKey } from '../database/schema/api-keys';
+import { refreshTokens } from '../database/schema/refresh-tokens';
 import { users, User } from '../database/schema/users';
 import { eq, and } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
