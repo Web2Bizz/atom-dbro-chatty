@@ -432,6 +432,55 @@ jobs:
             
             # Выполнение миграций базы данных
             echo "🗄️ Running database migrations..."
+            
+            # Проверка доступности базы данных перед миграциями
+            echo "🔍 Checking database connectivity..."
+            DB_CHECK_ATTEMPTS=0
+            MAX_DB_CHECK_ATTEMPTS=10
+            DB_READY=false
+            
+            while [ $DB_CHECK_ATTEMPTS -lt $MAX_DB_CHECK_ATTEMPTS ]; do
+              # Проверяем DATABASE_URL в контейнере
+              DB_URL=$(docker exec "$CONTAINER_NAME" sh -c 'echo $DATABASE_URL' 2>/dev/null || echo "")
+              if [ -z "$DB_URL" ]; then
+                echo "⚠️ DATABASE_URL not found in container, attempt $((DB_CHECK_ATTEMPTS + 1))/$MAX_DB_CHECK_ATTEMPTS"
+                DB_CHECK_ATTEMPTS=$((DB_CHECK_ATTEMPTS + 1))
+                sleep 2
+                continue
+              fi
+              
+              # Извлекаем хост и порт из DATABASE_URL для проверки доступности
+              # Формат: postgresql://user:password@host:port/database
+              DB_HOST=$(echo "$DB_URL" | sed -n 's/.*@\([^:]*\):.*/\1/p')
+              DB_PORT=$(echo "$DB_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p' | head -1)
+              
+              if [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
+                echo "⚠️ Could not parse DATABASE_URL, attempt $((DB_CHECK_ATTEMPTS + 1))/$MAX_DB_CHECK_ATTEMPTS"
+                DB_CHECK_ATTEMPTS=$((DB_CHECK_ATTEMPTS + 1))
+                sleep 2
+                continue
+              fi
+              
+              # Проверяем доступность базы данных через netcat или pg_isready
+              if docker exec "$CONTAINER_NAME" sh -c "command -v pg_isready >/dev/null 2>&1 && pg_isready -h $DB_HOST -p $DB_PORT || nc -z $DB_HOST $DB_PORT" 2>/dev/null; then
+                echo "✅ Database is accessible at $DB_HOST:$DB_PORT"
+                DB_READY=true
+                break
+              else
+                echo "⚠️ Database not accessible at $DB_HOST:$DB_PORT, attempt $((DB_CHECK_ATTEMPTS + 1))/$MAX_DB_CHECK_ATTEMPTS"
+                DB_CHECK_ATTEMPTS=$((DB_CHECK_ATTEMPTS + 1))
+                sleep 3
+              fi
+            done
+            
+            if [ "$DB_READY" != true ]; then
+              echo "❌ Database is not accessible after $MAX_DB_CHECK_ATTEMPTS attempts"
+              echo "📋 DATABASE_URL from container: $DB_URL"
+              echo "📋 Container logs:"
+              docker logs "$CONTAINER_NAME" --tail 50 || true
+              exit 1
+            fi
+            
             MAX_MIGRATION_ATTEMPTS=3
             MIGRATION_ATTEMPT=0
             MIGRATION_SUCCESS=false
@@ -439,6 +488,7 @@ jobs:
             while [ $MIGRATION_ATTEMPT -lt $MAX_MIGRATION_ATTEMPTS ]; do
               # Используем стандартную команду drizzle-kit migrate
               # Она автоматически проверяет _journal.json и применяет только новые миграции
+              echo "🔄 Migration attempt $((MIGRATION_ATTEMPT + 1))/$MAX_MIGRATION_ATTEMPTS..."
               if docker exec "$CONTAINER_NAME" npm run db:migrate 2>&1; then
                 MIGRATION_SUCCESS=true
                 echo "✅ Database migrations completed successfully"
@@ -452,6 +502,7 @@ jobs:
                   sleep 5
                 else
                   echo "❌ Database migrations failed after $MAX_MIGRATION_ATTEMPTS attempts"
+                  echo "📋 DATABASE_URL: $DB_URL"
                   echo "📋 Container logs:"
                   docker logs "$CONTAINER_NAME" --tail 50 || true
                   exit 1
