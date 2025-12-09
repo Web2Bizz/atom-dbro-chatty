@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { VersioningType, Logger } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 import { IoAdapter } from '@nestjs/platform-socket.io';
