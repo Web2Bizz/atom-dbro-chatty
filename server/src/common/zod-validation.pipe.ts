@@ -23,19 +23,26 @@ export class ZodValidationPipe implements PipeTransform {
     }
 
     try {
-      // Zod по умолчанию игнорирует дополнительные поля (passthrough mode)
-      // Используем passthrough() чтобы явно разрешить дополнительные поля
-      const parsedValue = this.schema.passthrough().parse(value);
+      // Zod по умолчанию игнорирует дополнительные поля (strip mode)
+      // Просто парсим значение - дополнительные поля будут проигнорированы
+      const parsedValue = this.schema.parse(value);
       return parsedValue;
     } catch (error) {
       if (error instanceof ZodError) {
         // Форматируем ошибки для лучшей читаемости
-        const formattedErrors = error.errors.map((err) => ({
-          expected: err.expected,
-          code: err.code,
-          path: err.path,
-          message: `Invalid input: expected ${err.expected}, received ${err.received}`,
-        }));
+        const formattedErrors = error.errors.map((err) => {
+          // Проверяем тип ошибки для доступа к expected/received
+          const issue = err as any;
+          const expected = issue.expected || 'valid value';
+          const received = issue.received || 'invalid';
+          
+          return {
+            expected,
+            code: err.code,
+            path: err.path,
+            message: err.message || `Invalid input: expected ${expected}, received ${received}`,
+          };
+        });
 
         throw new BadRequestException({
           message: 'Validation failed',
