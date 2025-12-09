@@ -5,6 +5,9 @@
 ###########################################################################
 FROM node:20-alpine AS base
 
+# Установка pnpm глобально
+RUN npm install -g pnpm
+
 WORKDIR /usr/src/app
 
 ###########################################################################
@@ -15,12 +18,13 @@ FROM base AS frontend-build
 WORKDIR /frontend
 
 COPY frontend/package.json ./
-RUN npm install
+COPY frontend/pnpm-lock.yaml ./
+RUN pnpm install
 
 COPY frontend ./
 ENV VITE_API_URL=/api/v1
 ENV VITE_SOCKET_URL=
-RUN npm run build
+RUN pnpm run build
 
 ###########################################################################
 # Build backend
@@ -31,33 +35,42 @@ WORKDIR /usr/src/app
 
 # Установка зависимостей для сборки
 COPY server/package.json ./
-RUN npm install
+COPY server/pnpm-lock.yaml ./
+RUN pnpm install
 
 # Копирование исходников и конфигурации
 COPY server/tsconfig*.json ./
 COPY server/nest-cli.json ./
 COPY server/drizzle.config.ts ./
+COPY build.sh ./
 COPY server/src ./src
 COPY server/drizzle ./drizzle
+RUN chmod +x build.sh
 
 # Копирование собранного фронтенда
 COPY --from=frontend-build /frontend/dist ./frontend
 
-# Сборка бэкенда
-RUN npm run build
+# Временное изменение tsconfig.json для Docker (outDir должен быть ./dist, а не ../dist)
+# В Docker все файлы уже в корне, поэтому dist должен быть в текущей директории
+RUN sed -i 's|"outDir": "../dist"|"outDir": "./dist"|g' tsconfig.json && \
+    sed -i 's|"tsBuildInfoFile": "../dist/tsconfig.tsbuildinfo"|"tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"|g' tsconfig.json
+
+# Сборка бэкенда через build.sh
+RUN sh build.sh
 
 ###########################################################################
 # Final runtime image
 ###########################################################################
-FROM node:20-alpine AS runner
+FROM base AS runner
 
 WORKDIR /usr/src/app
 ENV NODE_ENV=production
 
 # Установка только production зависимостей + drizzle-kit для миграций
 COPY server/package.json ./
-RUN npm install --production && \
-    npm install -D drizzle-kit@^0.31.7
+COPY server/pnpm-lock.yaml ./
+RUN pnpm install --prod && \
+    pnpm add -D drizzle-kit@^0.31.7
 
 # Копирование собранного приложения
 COPY --from=backend-build /usr/src/app/dist ./dist
