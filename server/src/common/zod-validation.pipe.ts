@@ -36,7 +36,7 @@ export class ZodValidationPipe implements PipeTransform {
           path: err.path,
           message: `Invalid input: expected ${err.expected}, received ${err.received}`,
         }));
-        
+
         throw new BadRequestException({
           message: 'Validation failed',
           errors: formattedErrors,
