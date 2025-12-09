@@ -9,9 +9,10 @@
     "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
-    "outDir": "./dist",
+    "outDir": "../dist",
     "baseUrl": "./",
     "incremental": true,
+    "tsBuildInfoFile": "../dist/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
@@ -21,6 +22,7 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "drizzle.config.ts"]
 }
-
