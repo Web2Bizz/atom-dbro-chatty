@@ -79,11 +79,19 @@ export class AuthController {
           type: 'string',
           minLength: 3,
           maxLength: 100,
-          description: 'Username (must be unique)',
+          description: 'Username (must be unique, 3-100 characters)',
+          example: 'johndoe',
         },
-        password: { type: 'string', minLength: 6, description: 'User password' },
+        password: {
+          type: 'string',
+          minLength: 6,
+          description: 'User password (minimum 6 characters)',
+          example: 'password123',
+        },
       },
+      additionalProperties: false,
     },
+    description: 'Registration data. Only username and password are required.',
   })
   @ApiResponse({
     status: 201,
@@ -91,7 +99,7 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string' },
+        id: { type: 'string', format: 'uuid' },
         username: { type: 'string' },
       },
     },
