@@ -66,17 +66,16 @@ const RegisterSchema = z.object({
     .refine((val) => val.length >= 3, {
       message: 'Username must be at least 3 characters long after trimming',
     }),
-  email: z
-    .preprocess(
-      (val) => {
-        if (val === '' || val === null || val === undefined) return undefined;
-        return typeof val === 'string' ? val.trim().toLowerCase() : val;
-      },
-      z
-        .string({ invalid_type_error: 'Email must be a string' })
-        .email({ message: 'Invalid email format' })
-        .optional(),
-    ),
+  email: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      return typeof val === 'string' ? val.trim().toLowerCase() : val;
+    },
+    z
+      .string({ invalid_type_error: 'Email must be a string' })
+      .email({ message: 'Invalid email format' })
+      .optional(),
+  ),
   password: z
     .string({
       required_error: 'Password is required',
@@ -136,7 +135,8 @@ export class AuthController {
         password: 'MySecurePassword123!',
       },
     },
-    description: 'Registration request body. Username and password are required fields. Email is optional.',
+    description:
+      'Registration request body. Username and password are required fields. Email is optional.',
   })
   @ApiResponse({
     status: 201,
