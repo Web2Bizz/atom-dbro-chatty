@@ -205,7 +205,7 @@ export class AuthService {
     try {
       // Явно генерируем UUID для избежания проблем с расширениями PostgreSQL
       const userId = randomUUID();
-      
+
       const [user] = await this.db
         .insert(users)
         .values({
