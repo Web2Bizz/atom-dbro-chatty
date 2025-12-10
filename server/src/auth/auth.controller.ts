@@ -55,8 +55,35 @@ const GenerateApiKeySchema = z.object({
 });
 
 const RegisterSchema = z.object({
-  username: z.string().min(3).max(100),
-  password: z.string().min(6),
+  username: z
+    .string({
+      required_error: 'Username is required',
+      invalid_type_error: 'Username must be a string',
+    })
+    .min(3, { message: 'Username must be at least 3 characters long' })
+    .max(100, { message: 'Username must not exceed 100 characters' })
+    .trim()
+    .refine((val) => val.length >= 3, {
+      message: 'Username must be at least 3 characters long after trimming',
+    }),
+  email: z
+    .preprocess(
+      (val) => {
+        if (val === '' || val === null || val === undefined) return undefined;
+        return typeof val === 'string' ? val.trim().toLowerCase() : val;
+      },
+      z
+        .string({ invalid_type_error: 'Email must be a string' })
+        .email({ message: 'Invalid email format' })
+        .optional(),
+    ),
+  password: z
+    .string({
+      required_error: 'Password is required',
+      invalid_type_error: 'Password must be a string',
+    })
+    .min(6, { message: 'Password must be at least 6 characters long' })
+    .max(255, { message: 'Password must not exceed 255 characters' }),
 });
 
 @ApiTags('auth')
@@ -72,7 +99,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Register a new user',
     description:
-      'Creates a new user account. Username must be unique and between 3-100 characters. Password must be at least 6 characters long.',
+      'Creates a new user account. Username must be unique and between 3-100 characters. Password must be at least 6 characters long. Email is optional but must be a valid email format if provided.',
   })
   @ApiBody({
     schema: {
@@ -87,6 +114,12 @@ export class AuthController {
             'Unique username for the account. Must be between 3 and 100 characters. Alphanumeric characters and common symbols are allowed.',
           example: 'johndoe',
         },
+        email: {
+          type: 'string',
+          format: 'email',
+          description: 'Optional email address for the account. Must be a valid email format.',
+          example: 'john.doe@example.com',
+        },
         password: {
           type: 'string',
           minLength: 6,
@@ -99,10 +132,11 @@ export class AuthController {
       additionalProperties: false,
       example: {
         username: 'johndoe',
+        email: 'john.doe@example.com',
         password: 'MySecurePassword123!',
       },
     },
-    description: 'Registration request body. Both username and password are required fields.',
+    description: 'Registration request body. Username and password are required fields. Email is optional.',
   })
   @ApiResponse({
     status: 201,
@@ -121,10 +155,18 @@ export class AuthController {
           description: 'Username of the registered user',
           example: 'johndoe',
         },
+        email: {
+          type: 'string',
+          format: 'email',
+          nullable: true,
+          description: 'Email address of the registered user (if provided)',
+          example: 'john.doe@example.com',
+        },
       },
       example: {
         id: '123e4567-e89b-12d3-a456-426614174000',
         username: 'johndoe',
+        email: 'john.doe@example.com',
       },
     },
   })
@@ -135,29 +177,18 @@ export class AuthController {
   @ApiResponse({
     status: 400,
     description:
-      'Invalid input data. Check that username is 3-100 characters and password is at least 6 characters.',
+      'Invalid input data. Check that username is 3-100 characters, password is at least 6 characters, and email (if provided) is a valid email format.',
   })
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   async register(@Body() data: z.infer<typeof RegisterSchema>) {
-    // Логируем полученные данные для отладки
-    console.log('Register request received:', {
-      username: data.username,
-      hasPassword: !!data.password,
-    });
-
-    if (!data.username) {
-      throw new UnauthorizedException('Username is required');
-    }
-
-    if (!data.password) {
-      throw new UnauthorizedException('Password is required');
-    }
-
-    const user = await this.authService.register(data.username, data.password);
+    // Данные уже валидированы через ZodValidationPipe
+    // Username и password гарантированно присутствуют и валидны
+    const user = await this.authService.register(data.username, data.password, data.email);
 
     return {
       id: user.id,
       username: user.username,
+      email: user.email,
     };
   }
 

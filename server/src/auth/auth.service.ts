@@ -149,7 +149,7 @@ export class AuthService {
   /**
    * Регистрация нового пользователя
    */
-  async register(username: string, password: string): Promise<User> {
+  async register(username: string, password: string, email?: string): Promise<User> {
     // Валидация входных данных
     if (!username || typeof username !== 'string') {
       this.logger.error(`Invalid username provided: ${username}`);
@@ -196,11 +196,15 @@ export class AuthService {
       throw new ConflictException('Username already exists');
     }
 
+    // Email уже валидирован через Zod в контроллере
+    // Просто нормализуем email, если он передан
+    const trimmedEmail = email ? email.trim().toLowerCase() : undefined;
+
     // Хешируем пароль
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Создаем пользователя
-    this.logger.log(`Creating user with username: ${trimmedUsername}`);
+    this.logger.log(`Creating user with username: ${trimmedUsername}${trimmedEmail ? `, email: ${trimmedEmail}` : ''}`);
 
     try {
       // Явно генерируем UUID для избежания проблем с расширениями PostgreSQL
@@ -211,6 +215,7 @@ export class AuthService {
         .values({
           id: userId,
           username: trimmedUsername,
+          email: trimmedEmail || null,
           password: hashedPassword,
         })
         .returning();
