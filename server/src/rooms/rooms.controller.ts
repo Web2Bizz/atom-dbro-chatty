@@ -12,6 +12,8 @@ import {
   NotFoundException,
   forwardRef,
   Logger,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,8 +29,8 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { GetApiKey } from '../auth/decorators/api-key.decorator';
 import { ApiKey } from '../database/schema/api-keys';
 import { GetUser } from '../auth/decorators/get-user.decorator';
-import { RequireScope } from '../auth/scopes/scopes.decorator';
-import { Scope } from '../auth/scopes/scopes.constants';
+import { RequireScope, RequireAnyScope } from '../auth/scopes/scopes.decorator';
+import { Scope, hasScope } from '../auth/scopes/scopes.constants';
 import { SocketGateway } from '../socket/socket.gateway';
 import { DATABASE_CONNECTION, Database } from '../database/database.module';
 import { users } from '../database/schema/users';
@@ -60,13 +62,44 @@ export class RoomsController {
     private readonly db: Database,
   ) {}
 
+  /**
+   * Проверяет, имеет ли API ключ доступ к комнате
+   * @param room - комната для проверки
+   * @param apiKey - API ключ
+   * @param userScopes - scopes пользователя/API ключа
+   * @returns true, если доступ разрешен
+   */
+  private hasAccessToRoom(
+    room: { createdBy: string | null },
+    apiKey: ApiKey | undefined,
+    userScopes: string[],
+  ): boolean {
+    // JWT пользователи имеют полный доступ
+    if (!apiKey) {
+      return true;
+    }
+
+    // Если есть scope allow-all или allow-all-chats, доступ ко всем комнатам
+    if (hasScope(userScopes, Scope.ALLOW_ALL) || hasScope(userScopes, Scope.ALLOW_ALL_CHATS)) {
+      return true;
+    }
+
+    // Если есть scope allow-create-rooms, доступ только к созданным комнатам
+    if (hasScope(userScopes, Scope.ALLOW_CREATE_ROOMS)) {
+      return room.createdBy === apiKey.userId;
+    }
+
+    // Нет подходящего scope
+    return false;
+  }
+
   @Post()
-  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @RequireAnyScope(Scope.ALLOW_ALL_CHATS, Scope.ALLOW_CREATE_ROOMS)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new room',
     description:
-      'Create a new room/chat. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+      'Create a new room/chat. Requires "allow-all-chats", "allow-create-rooms", or "allow-all" scope for API keys. JWT users have full access.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -92,7 +125,8 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+    description:
+      'Forbidden - API key does not have required scope (allow-all-chats, allow-create-rooms, or allow-all)',
   })
   async create(
     @Body(new ZodValidationPipe(CreateRoomSchema)) body: z.infer<typeof CreateRoomSchema>,
@@ -114,11 +148,11 @@ export class RoomsController {
   }
 
   @Get()
-  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @RequireAnyScope(Scope.ALLOW_ALL_CHATS, Scope.ALLOW_CREATE_ROOMS)
   @ApiOperation({
     summary: 'Get all existing rooms',
     description:
-      'Get all rooms in the system. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+      'Get all rooms in the system. Requires "allow-all-chats", "allow-create-rooms", or "allow-all" scope for API keys. API keys with "allow-create-rooms" can only see rooms they created. JWT users have full access.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -129,24 +163,55 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+    description:
+      'Forbidden - API key does not have required scope (allow-all-chats, allow-create-rooms, or allow-all)',
   })
   async findAll(
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
+    @Req() req?: any,
   ) {
     try {
       this.logger.debug(
         `GET /rooms - user: ${user?.userId || 'none'}, apiKey: ${apiKey?.id || 'none'}`,
       );
-      // Если пользователь авторизован, показываем все комнаты включая приватные
-      // Иначе только публичные
-      const includePrivate = !!(user?.userId || apiKey?.userId);
-      this.logger.debug(`includePrivate: ${includePrivate}`);
 
-      const rooms = await this.roomsService.findAll(includePrivate);
-      this.logger.debug(`Returning ${rooms.length} rooms`);
+      // Если это JWT пользователь, показываем все комнаты
+      if (user?.userId && !apiKey) {
+        const includePrivate = true;
+        const rooms = await this.roomsService.findAll(includePrivate);
+        this.logger.debug(`Returning ${rooms.length} rooms for JWT user`);
+        return rooms;
+      }
 
+      // Для API ключей проверяем scopes
+      if (apiKey) {
+        const userScopes: string[] = req?.user?.scopes || [];
+        const hasAllChatsAccess =
+          hasScope(userScopes, Scope.ALLOW_ALL) ||
+          hasScope(userScopes, Scope.ALLOW_ALL_CHATS);
+
+        if (hasAllChatsAccess) {
+          // Полный доступ ко всем комнатам
+          const includePrivate = true;
+          const rooms = await this.roomsService.findAll(includePrivate);
+          this.logger.debug(`Returning ${rooms.length} rooms for API key with full access`);
+          return rooms;
+        } else if (hasScope(userScopes, Scope.ALLOW_CREATE_ROOMS)) {
+          // Доступ только к созданным комнатам
+          const userId = apiKey.userId;
+          if (!userId) {
+            throw new ForbiddenException('API key must be associated with a user to access rooms');
+          }
+          const rooms = await this.roomsService.findByUserIdOnly(userId);
+          this.logger.debug(`Returning ${rooms.length} rooms created by API key`);
+          return rooms;
+        }
+      }
+
+      // Если не авторизован, показываем только публичные комнаты
+      const rooms = await this.roomsService.findAll(false);
+      this.logger.debug(`Returning ${rooms.length} public rooms`);
       return rooms;
     } catch (error) {
       this.logger.error(`Error in findAll: ${error.message}`, error.stack);
@@ -184,11 +249,11 @@ export class RoomsController {
   }
 
   @Get(':id/messages')
-  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @RequireAnyScope(Scope.ALLOW_ALL_CHATS, Scope.ALLOW_CREATE_ROOMS)
   @ApiOperation({
     summary: 'Get room messages history',
     description:
-      'Get messages from a room. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access. Use query parameters to filter messages for support chat scenarios.',
+      'Get messages from a room. Requires "allow-all-chats", "allow-create-rooms", or "allow-all" scope for API keys. API keys with "allow-create-rooms" can only access messages from rooms they created. JWT users have full access. Use query parameters to filter messages for support chat scenarios.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -197,7 +262,8 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+    description:
+      'Forbidden - API key does not have required scope or does not have access to this room',
   })
   @ApiResponse({ status: 404, description: 'Room not found' })
   async getRoomMessages(
@@ -207,7 +273,24 @@ export class RoomsController {
     @Query('includeRecipients') includeRecipients?: string, // Если true, включает сообщения где userId или recipientId = filterUserId
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
+    @Req() req?: any,
   ) {
+    // Проверяем доступ к комнате
+    const room = await this.roomsService.findOne(id);
+
+    // Если это JWT пользователь, разрешаем доступ
+    if (user?.userId && !apiKey) {
+      // Продолжаем выполнение
+    } else if (apiKey) {
+      // Для API ключей проверяем доступ
+      const userScopes: string[] = req?.user?.scopes || [];
+      if (!this.hasAccessToRoom(room, apiKey, userScopes)) {
+        throw new ForbiddenException(
+          'Access denied. You do not have permission to access messages from this room.',
+        );
+      }
+    }
+
     const messageLimit = limit ? parseInt(limit, 10) : 100;
     // Используем filterUserId из query или userId из токена
     const userId = filterUserId || user?.userId || apiKey?.userId;
@@ -224,11 +307,11 @@ export class RoomsController {
   }
 
   @Get(':id')
-  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @RequireAnyScope(Scope.ALLOW_ALL_CHATS, Scope.ALLOW_CREATE_ROOMS)
   @ApiOperation({
     summary: 'Get room by ID',
     description:
-      'Get room details by ID. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access.',
+      'Get room details by ID. Requires "allow-all-chats", "allow-create-rooms", or "allow-all" scope for API keys. API keys with "allow-create-rooms" can only access rooms they created. JWT users have full access.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -237,20 +320,43 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+    description:
+      'Forbidden - API key does not have required scope or does not have access to this room',
   })
   @ApiResponse({ status: 404, description: 'Room not found' })
-  async findOne(@Param('id') id: string) {
-    return this.roomsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @GetUser() user?: { userId: string; username?: string },
+    @GetApiKey() apiKey?: ApiKey,
+    @Req() req?: any,
+  ) {
+    const room = await this.roomsService.findOne(id);
+
+    // Если это JWT пользователь, разрешаем доступ
+    if (user?.userId && !apiKey) {
+      return room;
+    }
+
+    // Для API ключей проверяем доступ
+    if (apiKey) {
+      const userScopes: string[] = req?.user?.scopes || [];
+      if (!this.hasAccessToRoom(room, apiKey, userScopes)) {
+        throw new ForbiddenException(
+          'Access denied. You do not have permission to access this room.',
+        );
+      }
+    }
+
+    return room;
   }
 
   @Post(':id/messages')
-  @RequireScope(Scope.ALLOW_ALL_CHATS)
+  @RequireAnyScope(Scope.ALLOW_ALL_CHATS, Scope.ALLOW_CREATE_ROOMS)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Send a message to a room',
     description:
-      'Send a message to a room. Requires "allow-all-chats" or "allow-all" scope for API keys. JWT users have full access. For support chat: set recipientId to target a specific user, or leave null for broadcast to moderators. External application controls who can see messages.',
+      'Send a message to a room. Requires "allow-all-chats", "allow-create-rooms", or "allow-all" scope for API keys. API keys with "allow-create-rooms" can only send messages to rooms they created. JWT users have full access. For support chat: set recipientId to target a specific user, or leave null for broadcast to moderators. External application controls who can see messages.',
   })
   @ApiSecurity('api-key')
   @ApiSecurity('bearer')
@@ -285,7 +391,8 @@ export class RoomsController {
   @ApiResponse({ status: 401, description: 'Unauthorized - token required' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - API key does not have required scope (allow-all-chats or allow-all)',
+    description:
+      'Forbidden - API key does not have required scope or does not have access to this room',
   })
   @ApiResponse({ status: 404, description: 'Room not found' })
   @UsePipes(new ZodValidationPipe(CreateMessageSchema))
@@ -294,9 +401,23 @@ export class RoomsController {
     @Body() body: z.infer<typeof CreateMessageSchema>,
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
+    @Req() req?: any,
   ) {
-    // Проверяем, что комната существует
-    await this.roomsService.findOne(roomId);
+    // Проверяем, что комната существует и доступна
+    const room = await this.roomsService.findOne(roomId);
+
+    // Если это JWT пользователь, разрешаем доступ
+    if (user?.userId && !apiKey) {
+      // Продолжаем выполнение
+    } else if (apiKey) {
+      // Для API ключей проверяем доступ
+      const userScopes: string[] = req?.user?.scopes || [];
+      if (!this.hasAccessToRoom(room, apiKey, userScopes)) {
+        throw new ForbiddenException(
+          'Access denied. You do not have permission to send messages to this room.',
+        );
+      }
+    }
 
     // Определяем userId и username
     let userId: string | null = null;

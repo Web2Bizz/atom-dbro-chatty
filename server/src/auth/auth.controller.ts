@@ -49,7 +49,8 @@ const GenerateApiKeySchema = z.object({
         return validScopes.length === scopes.length;
       },
       {
-        message: 'Invalid scopes. Valid scopes are: allow-all, allow-all-chats, allow-all-users',
+        message:
+          'Invalid scopes. Valid scopes are: allow-all, allow-all-chats, allow-all-users, allow-create-rooms',
       },
     ),
 });
@@ -401,6 +402,7 @@ export class AuthController {
 - **allow-all**: Full access to all system functions (super permission)
 - **allow-all-chats**: Access to all chats/rooms in the system, including private ones
 - **allow-all-users**: Access to all users in the system, including their profiles and data
+- **allow-create-rooms**: Permission to create rooms and have full access to created rooms (view, messages). Does not grant access to all system rooms, only to rooms created by this API key.
 
 If no scopes are provided, the API key will have no special permissions (only basic access).
 Multiple scopes can be specified.`,
