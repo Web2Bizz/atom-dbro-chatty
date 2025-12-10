@@ -15,7 +15,7 @@ export class RoomsService {
 
   async create(data: NewRoom): Promise<Room> {
     const roomType = data.type ?? 'normal';
-    
+
     // Создаем комнату без поля type, так как колонка может отсутствовать в БД
     const insertData: any = {
       name: data.name,
@@ -24,12 +24,12 @@ export class RoomsService {
       createdBy: data.createdBy ?? null,
       // type исключено, так как колонки может не быть в БД
     };
-    
+
     // Добавляем id только если он явно указан
     if (data.id) {
       insertData.id = data.id;
     }
-    
+
     try {
       // Пытаемся создать комнату с полем type
       const [room] = await this.db
@@ -45,30 +45,34 @@ export class RoomsService {
     } catch (error: any) {
       // Логируем структуру ошибки для диагностики
       const errorMessage = error?.message || error?.cause?.message || '';
-      const isTypeColumnError = 
-        errorMessage.includes('column "type"') && errorMessage.includes('does not exist') ||
+      const isTypeColumnError =
+        (errorMessage.includes('column "type"') && errorMessage.includes('does not exist')) ||
         errorMessage.includes('column type does not exist') ||
         error?.cause?.code === '42703'; // PostgreSQL error code for undefined column
-      
+
       // Если ошибка связана с отсутствием колонки type, создаем без неё
       if (isTypeColumnError) {
-        this.logger.warn('Column "type" does not exist in database, creating room without type field');
-        
+        this.logger.warn(
+          'Column "type" does not exist in database, creating room without type field',
+        );
+
         // Используем raw SQL для insert без поля type, так как Drizzle все равно пытается его вставить
         const result = await this.db.execute(sql`
           INSERT INTO rooms (name, description, is_private, created_by, created_at, updated_at)
           VALUES (${insertData.name}, ${insertData.description}, ${insertData.isPrivate}, ${insertData.createdBy}, DEFAULT, DEFAULT)
           RETURNING id, name, description, is_private, created_by, created_at, updated_at
         `);
-        
+
         // Обрабатываем результат в зависимости от формата
-        const resultArray = Array.isArray(result) ? result : (result as any).rows || [(result as any)[0]];
+        const resultArray = Array.isArray(result)
+          ? result
+          : (result as any).rows || [(result as any)[0]];
         const roomRow = resultArray[0] as any;
-        
+
         if (!roomRow) {
           throw new Error('Failed to create room: no data returned');
         }
-        
+
         const room = {
           id: roomRow.id,
           name: roomRow.name,
@@ -90,11 +94,17 @@ export class RoomsService {
       } else {
         // Если это другая ошибка, логируем и пробрасываем её дальше
         this.logger.error(`Error creating room: ${error.message}`, error.stack);
-        this.logger.debug(`Error structure: ${JSON.stringify({
-          message: error?.message,
-          causeMessage: error?.cause?.message,
-          cause: error?.cause,
-        }, null, 2)}`);
+        this.logger.debug(
+          `Error structure: ${JSON.stringify(
+            {
+              message: error?.message,
+              causeMessage: error?.cause?.message,
+              cause: error?.cause,
+            },
+            null,
+            2,
+          )}`,
+        );
         throw error;
       }
     }
