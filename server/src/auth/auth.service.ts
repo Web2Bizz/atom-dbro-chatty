@@ -14,6 +14,7 @@ import { refreshTokens } from '../database/schema/refresh-tokens';
 import { users, User } from '../database/schema/users';
 import { eq, and } from 'drizzle-orm';
 import * as bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { ApiKeyJwtPayload } from './strategies/api-key-jwt.strategy';
 
@@ -202,9 +203,13 @@ export class AuthService {
     this.logger.log(`Creating user with username: ${trimmedUsername}`);
 
     try {
+      // Явно генерируем UUID для избежания проблем с расширениями PostgreSQL
+      const userId = randomUUID();
+      
       const [user] = await this.db
         .insert(users)
         .values({
+          id: userId,
           username: trimmedUsername,
           password: hashedPassword,
         })
@@ -224,10 +229,22 @@ export class AuthService {
         throw new ConflictException('User with this username already exists');
       }
 
-      this.logger.error(
-        `Error creating user: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error,
-      );
+      // Улучшенное логирование ошибок
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      const errorCode = error?.code;
+      const errorDetail = error?.detail;
+      const errorHint = error?.hint;
+
+      this.logger.error(`Error creating user: ${errorMessage}`, {
+        errorCode,
+        errorDetail,
+        errorHint,
+        errorStack,
+        username: trimmedUsername,
+        fullError: error,
+      });
+
       throw new ConflictException('Failed to create user');
     }
   }
