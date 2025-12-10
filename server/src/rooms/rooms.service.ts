@@ -3,18 +3,10 @@ import { DATABASE_CONNECTION, Database } from '../database/database.module';
 import { rooms, Room, NewRoom } from '../database/schema/rooms';
 import { messages, Message, NewMessage } from '../database/schema/messages';
 import { eq, or, desc, asc, and, sql } from 'drizzle-orm';
-import { appendFileSync } from 'fs';
 
 @Injectable()
 export class RoomsService {
   private readonly logger = new Logger(RoomsService.name);
-  private readonly logPath = 'e:\\Others\\web_apps\\atom-dbro-backend\\.cursor\\debug.log';
-
-  private writeLog(data: any) {
-    try {
-      appendFileSync(this.logPath, JSON.stringify(data) + '\n', 'utf8');
-    } catch (e) {}
-  }
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -218,65 +210,46 @@ export class RoomsService {
   async findByUserId(userId: string): Promise<Room[]> {
     try {
       this.logger.debug(`Finding rooms for userId: ${userId}`);
-      // #region agent log
-      this.writeLog({
-        location: 'rooms.service.ts:211',
-        message: 'findByUserId entry',
-        data: { userId, userIdType: typeof userId },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      });
-      // #endregion
       // Получаем комнаты, созданные пользователем, и все публичные комнаты
-      // #region agent log
-      this.writeLog({
-        location: 'rooms.service.ts:214',
-        message: 'before database query',
-        data: {},
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      });
-      // #endregion
-      const result = await this.db
-        .select()
-        .from(rooms)
-        .where(or(eq(rooms.createdBy, userId), eq(rooms.isPrivate, false)))
-        .orderBy(asc(rooms.createdAt));
-      // #region agent log
-      this.writeLog({
-        location: 'rooms.service.ts:219',
-        message: 'database query success',
-        data: { resultCount: result?.length },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      });
-      // #endregion
+      let result: Room[];
+      try {
+        result = await this.db
+          .select()
+          .from(rooms)
+          .where(or(eq(rooms.createdBy, userId), eq(rooms.isPrivate, false)))
+          .orderBy(asc(rooms.createdAt));
+      } catch (error: any) {
+        // Если ошибка связана с отсутствием колонки type, используем частичный select
+        const errorMessage = error?.message || error?.cause?.message || '';
+        const isTypeColumnError =
+          errorMessage.includes('column "type"') ||
+          errorMessage.includes('column type does not exist') ||
+          error?.cause?.code === '42703'; // PostgreSQL error code for undefined column
+
+        if (isTypeColumnError) {
+          this.logger.warn('Column "type" does not exist in database, using fallback select');
+          const partialResult = await this.db
+            .select({
+              id: rooms.id,
+              name: rooms.name,
+              description: rooms.description,
+              isPrivate: rooms.isPrivate,
+              createdBy: rooms.createdBy,
+              createdAt: rooms.createdAt,
+              updatedAt: rooms.updatedAt,
+              type: sql<'normal' | 'support'>`'normal'`.as('type'),
+            })
+            .from(rooms)
+            .where(or(eq(rooms.createdBy, userId), eq(rooms.isPrivate, false)))
+            .orderBy(asc(rooms.createdAt));
+          result = partialResult as Room[];
+        } else {
+          throw error;
+        }
+      }
       this.logger.debug(`Found ${result.length} rooms for userId: ${userId}`);
       return result;
     } catch (error) {
-      // #region agent log
-      this.writeLog({
-        location: 'rooms.service.ts:222',
-        message: 'database query error',
-        data: {
-          errorMessage: error?.message,
-          errorName: error?.name,
-          errorCode: error?.code,
-          errorCause: error?.cause?.message,
-          errorStack: error?.stack?.substring(0, 500),
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      });
-      // #endregion
       this.logger.error(`Error in findByUserId: ${error.message}`, error.stack);
       throw error;
     }
