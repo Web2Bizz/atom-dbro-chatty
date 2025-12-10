@@ -71,7 +71,8 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Register a new user',
-    description: 'Creates a new user account. Username must be unique and between 3-100 characters. Password must be at least 6 characters long.',
+    description:
+      'Creates a new user account. Username must be unique and between 3-100 characters. Password must be at least 6 characters long.',
   })
   @ApiBody({
     schema: {
@@ -82,14 +83,16 @@ export class AuthController {
           type: 'string',
           minLength: 3,
           maxLength: 100,
-          description: 'Unique username for the account. Must be between 3 and 100 characters. Alphanumeric characters and common symbols are allowed.',
+          description:
+            'Unique username for the account. Must be between 3 and 100 characters. Alphanumeric characters and common symbols are allowed.',
           example: 'johndoe',
         },
         password: {
           type: 'string',
           minLength: 6,
           format: 'password',
-          description: 'User password. Must be at least 6 characters long. It is recommended to use a strong password with a mix of letters, numbers, and symbols.',
+          description:
+            'User password. Must be at least 6 characters long. It is recommended to use a strong password with a mix of letters, numbers, and symbols.',
           example: 'MySecurePassword123!',
         },
       },
@@ -107,8 +110,17 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', format: 'uuid', description: 'Unique user identifier', example: '123e4567-e89b-12d3-a456-426614174000' },
-        username: { type: 'string', description: 'Username of the registered user', example: 'johndoe' },
+        id: {
+          type: 'string',
+          format: 'uuid',
+          description: 'Unique user identifier',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        username: {
+          type: 'string',
+          description: 'Username of the registered user',
+          example: 'johndoe',
+        },
       },
       example: {
         id: '123e4567-e89b-12d3-a456-426614174000',
@@ -116,8 +128,15 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 409, description: 'Username already exists. The provided username is already taken by another user.' })
-  @ApiResponse({ status: 400, description: 'Invalid input data. Check that username is 3-100 characters and password is at least 6 characters.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Username already exists. The provided username is already taken by another user.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Invalid input data. Check that username is 3-100 characters and password is at least 6 characters.',
+  })
   @UsePipes(new ZodValidationPipe(RegisterSchema))
   async register(@Body() data: z.infer<typeof RegisterSchema>) {
     // Логируем полученные данные для отладки
@@ -149,7 +168,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Login with username and password',
-    description: 'Authenticates a user with username and password. Returns access token and refresh token for API authentication.',
+    description:
+      'Authenticates a user with username and password. Returns access token and refresh token for API authentication.',
   })
   @ApiBody({
     schema: {
@@ -187,25 +207,34 @@ export class AuthController {
       properties: {
         accessToken: {
           type: 'string',
-          description: 'JWT access token. Use this token in the Authorization header as "Bearer {accessToken}" for authenticated requests. Expires in 15 minutes by default.',
+          description:
+            'JWT access token. Use this token in the Authorization header as "Bearer {accessToken}" for authenticated requests. Expires in 15 minutes by default.',
           example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         },
         refreshToken: {
           type: 'string',
-          description: 'JWT refresh token. Use this token to obtain a new access token when it expires. Expires in 7 days by default.',
+          description:
+            'JWT refresh token. Use this token to obtain a new access token when it expires. Expires in 7 days by default.',
           example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         },
         user: {
           type: 'object',
           properties: {
-            id: { type: 'string', format: 'uuid', description: 'User unique identifier', example: '123e4567-e89b-12d3-a456-426614174000' },
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: 'User unique identifier',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+            },
             username: { type: 'string', description: 'Username', example: 'johndoe' },
           },
         },
       },
       example: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMn0...',
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMn0...',
+        accessToken:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMn0...',
+        refreshToken:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTUxNjIzOTAyMn0...',
         user: {
           id: '123e4567-e89b-12d3-a456-426614174000',
           username: 'johndoe',
@@ -213,7 +242,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Invalid credentials. Username or password is incorrect.' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials. Username or password is incorrect.',
+  })
   @UsePipes(new ZodValidationPipe(LoginSchema))
   async login(@Body() data: z.infer<typeof LoginSchema>) {
     const user = await this.authService.validateUser(data.username, data.password);
@@ -238,7 +270,8 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Refresh access token',
-    description: 'Obtains a new access token using a valid refresh token. Requires a valid access token in the Authorization header.',
+    description:
+      'Obtains a new access token using a valid refresh token. Requires a valid access token in the Authorization header.',
   })
   @ApiBody({
     schema: {
@@ -247,16 +280,20 @@ export class AuthController {
       properties: {
         refreshToken: {
           type: 'string',
-          description: 'The refresh token received from the login endpoint. This token is used to obtain a new access token when the current one expires.',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNTE2MjM5MDIyfQ...',
+          description:
+            'The refresh token received from the login endpoint. This token is used to obtain a new access token when the current one expires.',
+          example:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNTE2MjM5MDIyfQ...',
         },
       },
       additionalProperties: false,
       example: {
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNTE2MjM5MDIyfQ...',
+        refreshToken:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNTE2MjM5MDIyfQ...',
       },
     },
-    description: 'Refresh token request body. The refresh token from the login response is required.',
+    description:
+      'Refresh token request body. The refresh token from the login response is required.',
   })
   @ApiResponse({
     status: 200,
@@ -266,18 +303,22 @@ export class AuthController {
       properties: {
         accessToken: {
           type: 'string',
-          description: 'New JWT access token. Use this token in the Authorization header as "Bearer {accessToken}" for authenticated requests.',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE1MTYyMzkwMjJ9...',
+          description:
+            'New JWT access token. Use this token in the Authorization header as "Bearer {accessToken}" for authenticated requests.',
+          example:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE1MTYyMzkwMjJ9...',
         },
       },
       example: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE1MTYyMzkwMjJ9...',
+        accessToken:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OCIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE1MTYyMzkwMjJ9...',
       },
     },
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized. Either the access token is missing/invalid, or the refresh token is expired/revoked/invalid.',
+    description:
+      'Unauthorized. Either the access token is missing/invalid, or the refresh token is expired/revoked/invalid.',
   })
   @UsePipes(new ZodValidationPipe(RefreshTokenSchema))
   async refresh(@Body() data: z.infer<typeof RefreshTokenSchema>) {
