@@ -290,33 +290,135 @@ export class AuthService {
     ipAddress: string | undefined,
     userAgent: string | undefined,
   ): Promise<{ apiKey: ApiKey; token: string }> {
-    const expiresAt = expiresInDays
+    this.logger.debug(`[generateApiKey] Starting API key generation`);
+    this.logger.debug(`[generateApiKey] Input parameters:`, {
+      name: name || null,
+      userId,
+      expiresInDays: expiresInDays || null,
+      scopes: scopes || [],
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+    });
+
+    // Создаем expiresAt как Date объект или null
+    // Drizzle автоматически конвертирует Date в timestamp для PostgreSQL
+    const expiresAt: Date | null = expiresInDays
       ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
       : null;
+
+    this.logger.debug(`[generateApiKey] Calculated expiresAt: ${expiresAt ? expiresAt.toISOString() : 'null'}`);
 
     // Сначала создаём временную запись для получения ID
     // Используем временный ключ, который потом заменим
     const tempKey = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    this.logger.debug(`[generateApiKey] Generated tempKey: ${tempKey}`);
 
     // Нормализуем scopes - если не переданы, API ключ будет без специальных прав
     const normalizedScopes = scopes && scopes.length > 0 ? scopes : [];
+    this.logger.debug(`[generateApiKey] Normalized scopes: ${JSON.stringify(normalizedScopes)}`);
 
-    const [apiKey] = await this.db
-      .insert(apiKeys)
-      .values({
-        key: tempKey, // Временный ключ, будет заменён на JWT
-        name: name || null,
-        userId: userId || null,
-        expiresAt,
-        isActive: true,
-        ipAddress: ipAddress || null,
-        userAgent: userAgent || null,
-        scopes: normalizedScopes.length > 0 ? JSON.stringify(normalizedScopes) : null,
-        permissions: null, // Не используем permissions, только scopes
-      })
-      .returning();
+    // Подготавливаем данные для вставки
+    // Важно: expiresAt должен быть Date объектом или null для Drizzle
+    const insertData = {
+      key: tempKey, // Временный ключ, будет заменён на JWT
+      name: name || null,
+      userId: userId || null,
+      expiresAt: expiresAt instanceof Date ? expiresAt : null, // Убеждаемся что это Date объект
+      isActive: true,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      scopes: normalizedScopes.length > 0 ? JSON.stringify(normalizedScopes) : null,
+      // permissions не передаем - поле не существует в таблице БД
+    };
+
+    // Дополнительная проверка типа expiresAt
+    if (insertData.expiresAt && !(insertData.expiresAt instanceof Date)) {
+      this.logger.error(`[generateApiKey] expiresAt is not a Date object: ${typeof insertData.expiresAt}, value: ${insertData.expiresAt}`);
+      throw new Error('expiresAt must be a Date object or null');
+    }
+
+    this.logger.debug(`[generateApiKey] Data to insert:`, {
+      key: insertData.key,
+      name: insertData.name,
+      userId: insertData.userId,
+      expiresAt: insertData.expiresAt ? insertData.expiresAt.toISOString() : null,
+      isActive: insertData.isActive,
+      ipAddress: insertData.ipAddress,
+      userAgent: insertData.userAgent,
+      scopes: insertData.scopes,
+    });
+
+    // Проверяем типы данных перед вставкой
+    this.logger.debug(`[generateApiKey] Data types:`, {
+      key: typeof insertData.key,
+      name: typeof insertData.name,
+      userId: typeof insertData.userId,
+      expiresAt: insertData.expiresAt ? typeof insertData.expiresAt : 'null',
+      isActive: typeof insertData.isActive,
+      ipAddress: typeof insertData.ipAddress,
+      userAgent: typeof insertData.userAgent,
+      scopes: typeof insertData.scopes,
+    });
+
+    // Проверяем длину строковых полей
+    if (insertData.name && insertData.name.length > 255) {
+      this.logger.warn(`[generateApiKey] Name too long: ${insertData.name.length} chars (max 255)`);
+    }
+    if (insertData.ipAddress && insertData.ipAddress.length > 45) {
+      this.logger.warn(`[generateApiKey] IP address too long: ${insertData.ipAddress.length} chars (max 45)`);
+    }
+
+    let apiKey: ApiKey;
+    try {
+      this.logger.debug(`[generateApiKey] Executing database insert...`);
+      const [insertedApiKey] = await this.db
+        .insert(apiKeys)
+        .values(insertData)
+        .returning();
+
+      apiKey = insertedApiKey;
+
+      this.logger.debug(`[generateApiKey] Database insert successful`);
+      this.logger.debug(`[generateApiKey] Inserted API key:`, {
+        id: apiKey.id,
+        key: apiKey.key?.substring(0, 20) + '...',
+        name: apiKey.name,
+        userId: apiKey.userId,
+        expiresAt: apiKey.expiresAt ? apiKey.expiresAt.toISOString() : null,
+        isActive: apiKey.isActive,
+        ipAddress: apiKey.ipAddress,
+        userAgent: apiKey.userAgent?.substring(0, 50) + '...',
+        scopes: apiKey.scopes,
+        createdAt: apiKey.createdAt?.toISOString(),
+      });
+    } catch (error: any) {
+      // Детальное логирование ошибки
+      this.logger.error(`[generateApiKey] Database insert failed`);
+      this.logger.error(`[generateApiKey] Error message: ${error.message}`);
+      this.logger.error(`[generateApiKey] Error code: ${error.code || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Error detail: ${error.detail || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Error constraint: ${error.constraint || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Error table: ${error.table || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Error column: ${error.column || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Error dataType: ${error.dataType || 'N/A'}`);
+      this.logger.error(`[generateApiKey] Full error object:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      this.logger.error(`[generateApiKey] Failed insert data (raw):`, {
+        key: insertData.key,
+        name: insertData.name,
+        userId: insertData.userId,
+        expiresAt: insertData.expiresAt,
+        expiresAtType: typeof insertData.expiresAt,
+        expiresAtIsDate: insertData.expiresAt instanceof Date,
+        isActive: insertData.isActive,
+        ipAddress: insertData.ipAddress,
+        userAgent: insertData.userAgent,
+        scopes: insertData.scopes,
+      });
+      throw error;
+    }
 
     // Генерируем JWT токен для API ключа
+    this.logger.debug(`[generateApiKey] Generating JWT token for API key ${apiKey.id}`);
     const payload: ApiKeyJwtPayload = {
       sub: apiKey.id,
       userId: userId,
@@ -324,24 +426,55 @@ export class AuthService {
       scopes: normalizedScopes,
     };
 
-    const token = this.jwtService.sign(payload, {
-      secret:
-        this.configService.get<string>('JWT_API_KEY_SECRET') ||
-        this.configService.get<string>('JWT_SECRET') ||
-        'your-api-key-secret-key',
-      expiresIn: expiresInDays ? `${expiresInDays}d` : '365d', // По умолчанию год
+    this.logger.debug(`[generateApiKey] JWT payload:`, {
+      sub: payload.sub,
+      userId: payload.userId,
+      type: payload.type,
+      scopes: payload.scopes,
     });
 
-    // Сохраняем JWT токен в базу данных
-    const [updatedApiKey] = await this.db
-      .update(apiKeys)
-      .set({ key: token })
-      .where(eq(apiKeys.id, apiKey.id))
-      .returning();
+    const jwtSecret =
+      this.configService.get<string>('JWT_API_KEY_SECRET') ||
+      this.configService.get<string>('JWT_SECRET') ||
+      'your-api-key-secret-key';
+    const jwtExpiresIn = expiresInDays ? `${expiresInDays}d` : '365d';
 
-    this.logger.log(
-      `API key generated: ${updatedApiKey.id}${name ? ` (${name})` : ''}${userId ? ` for user ${userId}` : ''}`,
-    );
+    this.logger.debug(`[generateApiKey] JWT options:`, {
+      secret: jwtSecret.substring(0, 10) + '...',
+      expiresIn: jwtExpiresIn,
+    });
+
+    const token = this.jwtService.sign(payload, {
+      secret: jwtSecret,
+      expiresIn: jwtExpiresIn, // По умолчанию год
+    });
+
+    this.logger.debug(`[generateApiKey] JWT token generated, length: ${token.length}`);
+
+    // Сохраняем JWT токен в базу данных
+    this.logger.debug(`[generateApiKey] Updating API key with JWT token...`);
+    let updatedApiKey: ApiKey;
+    try {
+      const [updated] = await this.db
+        .update(apiKeys)
+        .set({ key: token })
+        .where(eq(apiKeys.id, apiKey.id))
+        .returning();
+
+      updatedApiKey = updated;
+
+      this.logger.debug(`[generateApiKey] API key updated successfully`);
+      this.logger.log(
+        `[generateApiKey] API key created successfully: id=${updatedApiKey.id}, userId=${userId}, name=${name || 'unnamed'}, expiresInDays=${expiresInDays || 'never'}`,
+      );
+    } catch (error: any) {
+      this.logger.error(`[generateApiKey] Failed to update API key with JWT token:`, {
+        error: error.message,
+        stack: error.stack,
+        apiKeyId: apiKey.id,
+      });
+      throw error;
+    }
 
     return {
       apiKey: updatedApiKey,

@@ -418,22 +418,53 @@ Multiple scopes can be specified.`,
     @GetUser() user: { userId: string; username?: string },
     @Req() req: Request,
   ) {
+    // Используем req.user напрямую, так как декоратор может не работать правильно
+    // Декоратор используется для типизации, но данные берем из req.user
+    const authenticatedUser = (req.user || user) as { userId: string; username?: string };
+    
     // Проверяем, что пользователь авторизован
-    if (!user || !user.userId) {
+    if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
     // Валидируем и нормализуем scopes
     const validatedScopes = data.scopes ? validateScopes(data.scopes) : [];
 
-    const ipAddress =
-      req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    // Нормализуем IP адрес
+    let ipAddress: string | undefined;
+    const rawIp = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    
+    if (rawIp) {
+      // Если x-forwarded-for содержит несколько IP (через запятую), берем первый
+      const firstIp = rawIp.split(',')[0].trim();
+      
+      // Конвертируем IPv6-маппированный IPv4 (::ffff:127.0.0.1) в обычный IPv4
+      if (firstIp.startsWith('::ffff:')) {
+        ipAddress = firstIp.substring(7); // Убираем ::ffff: префикс
+      } else if (firstIp.startsWith('::1')) {
+        // Локальный IPv6 адрес, конвертируем в IPv4 localhost
+        ipAddress = '127.0.0.1';
+      } else {
+        ipAddress = firstIp;
+      }
+      
+      // Проверяем длину (максимум 45 символов для IPv6)
+      // IPv4: максимум 15 символов (255.255.255.255)
+      // IPv6: максимум 45 символов (полный формат с портом)
+      if (ipAddress && ipAddress.length > 45) {
+        // Обрезаем до 45 символов, но это не должно происходить для валидных IP
+        // Логируем предупреждение, если IP слишком длинный
+        console.warn(`IP address too long (${ipAddress.length} chars), truncating: ${ipAddress}`);
+        ipAddress = ipAddress.substring(0, 45);
+      }
+    }
+    
     const userAgent = req.headers['user-agent'];
 
     // API ключ автоматически привязывается к авторизованному пользователю
     const result = await this.authService.generateApiKey(
       data.name,
-      user.userId, // Автоматически берётся из авторизованного пользователя
+      authenticatedUser.userId, // Используем authenticatedUser вместо user
       data.expiresInDays,
       validatedScopes.length > 0 ? validatedScopes : undefined,
       ipAddress,
@@ -457,14 +488,20 @@ Multiple scopes can be specified.`,
   @ApiOperation({ summary: 'Get all API keys for the authenticated user' })
   @ApiResponse({ status: 200, description: 'List of API keys' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getUserApiKeys(@GetUser() user: { userId: string; username?: string }) {
+  async getUserApiKeys(
+    @GetUser() user: { userId: string; username?: string },
+    @Req() req: Request,
+  ) {
+    // Используем req.user напрямую
+    const authenticatedUser = (req.user || user) as { userId: string; username?: string };
+    
     // Проверяем, что пользователь авторизован
-    if (!user || !user.userId) {
+    if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
     // Получаем ключи только для авторизованного пользователя
-    const keys = await this.authService.getUserApiKeys(user.userId);
+    const keys = await this.authService.getUserApiKeys(authenticatedUser.userId);
     // Не возвращаем сами ключи, только метаданные
     return keys.map((key) => ({
       id: key.id,
@@ -489,14 +526,18 @@ Multiple scopes can be specified.`,
   async revokeApiKey(
     @Param('id') id: string,
     @GetUser() user: { userId: string; username?: string },
+    @Req() req: Request,
   ) {
+    // Используем req.user напрямую
+    const authenticatedUser = (req.user || user) as { userId: string; username?: string };
+    
     // Проверяем, что пользователь авторизован
-    if (!user || !user.userId) {
+    if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
     // Отзываем ключ только если он принадлежит пользователю
-    await this.authService.revokeApiKey(id, user.userId);
+    await this.authService.revokeApiKey(id, authenticatedUser.userId);
   }
 
   @Delete('api-keys/:id/delete')
@@ -511,13 +552,17 @@ Multiple scopes can be specified.`,
   async deleteApiKey(
     @Param('id') id: string,
     @GetUser() user: { userId: string; username?: string },
+    @Req() req: Request,
   ) {
+    // Используем req.user напрямую
+    const authenticatedUser = (req.user || user) as { userId: string; username?: string };
+    
     // Проверяем, что пользователь авторизован
-    if (!user || !user.userId) {
+    if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
     // Удаляем ключ только если он принадлежит пользователю
-    await this.authService.deleteApiKey(id, user.userId);
+    await this.authService.deleteApiKey(id, authenticatedUser.userId);
   }
 }
