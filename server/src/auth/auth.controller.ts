@@ -421,7 +421,7 @@ Multiple scopes can be specified.`,
     // Используем req.user напрямую, так как декоратор может не работать правильно
     // Декоратор используется для типизации, но данные берем из req.user
     const authenticatedUser = (req.user || user) as { userId: string; username?: string };
-    
+
     // Проверяем, что пользователь авторизован
     if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
@@ -433,11 +433,11 @@ Multiple scopes can be specified.`,
     // Нормализуем IP адрес
     let ipAddress: string | undefined;
     const rawIp = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
-    
+
     if (rawIp) {
       // Если x-forwarded-for содержит несколько IP (через запятую), берем первый
       const firstIp = rawIp.split(',')[0].trim();
-      
+
       // Конвертируем IPv6-маппированный IPv4 (::ffff:127.0.0.1) в обычный IPv4
       if (firstIp.startsWith('::ffff:')) {
         ipAddress = firstIp.substring(7); // Убираем ::ffff: префикс
@@ -447,7 +447,7 @@ Multiple scopes can be specified.`,
       } else {
         ipAddress = firstIp;
       }
-      
+
       // Проверяем длину (максимум 45 символов для IPv6)
       // IPv4: максимум 15 символов (255.255.255.255)
       // IPv6: максимум 45 символов (полный формат с портом)
@@ -458,7 +458,7 @@ Multiple scopes can be specified.`,
         ipAddress = ipAddress.substring(0, 45);
       }
     }
-    
+
     const userAgent = req.headers['user-agent'];
 
     // API ключ автоматически привязывается к авторизованному пользователю
@@ -494,7 +494,7 @@ Multiple scopes can be specified.`,
   ) {
     // Используем req.user напрямую
     const authenticatedUser = (req.user || user) as { userId: string; username?: string };
-    
+
     // Проверяем, что пользователь авторизован
     if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
@@ -530,7 +530,7 @@ Multiple scopes can be specified.`,
   ) {
     // Используем req.user напрямую
     const authenticatedUser = (req.user || user) as { userId: string; username?: string };
-    
+
     // Проверяем, что пользователь авторизован
     if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');
@@ -556,7 +556,7 @@ Multiple scopes can be specified.`,
   ) {
     // Используем req.user напрямую
     const authenticatedUser = (req.user || user) as { userId: string; username?: string };
-    
+
     // Проверяем, что пользователь авторизован
     if (!authenticatedUser || !authenticatedUser.userId) {
       throw new UnauthorizedException('User not authenticated');

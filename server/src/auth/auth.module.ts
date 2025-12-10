@@ -24,13 +24,7 @@ import { ScopeGuard } from './guards/scope.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    ApiKeyJwtStrategy,
-    CombinedAuthGuard,
-    ScopeGuard,
-  ],
+  providers: [AuthService, JwtStrategy, ApiKeyJwtStrategy, CombinedAuthGuard, ScopeGuard],
   exports: [AuthService, JwtModule, CombinedAuthGuard, ScopeGuard],
 })
 export class AuthModule {}

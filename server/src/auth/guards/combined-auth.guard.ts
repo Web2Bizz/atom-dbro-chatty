@@ -51,10 +51,14 @@ export class CombinedAuthGuard implements CanActivate {
         strategy,
         { session: false },
         (err: any, user: any, info: any) => {
-          this.logger.debug(`Passport callback called for strategy ${strategy}, err: ${!!err}, user: ${!!user}`);
-          
+          this.logger.debug(
+            `Passport callback called for strategy ${strategy}, err: ${!!err}, user: ${!!user}`,
+          );
+
           if (callbackCalled) {
-            this.logger.warn(`Callback already called for strategy ${strategy}, ignoring duplicate call`);
+            this.logger.warn(
+              `Callback already called for strategy ${strategy}, ignoring duplicate call`,
+            );
             return; // Уже обработано через таймаут или другой путь
           }
           callbackCalled = true;
@@ -62,13 +66,17 @@ export class CombinedAuthGuard implements CanActivate {
 
           if (err) {
             this.logger.error(`Authentication error for strategy ${strategy}: ${err.message}`);
-            reject(err instanceof UnauthorizedException ? err : new UnauthorizedException(err.message));
+            reject(
+              err instanceof UnauthorizedException ? err : new UnauthorizedException(err.message),
+            );
             return;
           }
 
           if (!user) {
             const errorMessage = info?.message || 'Authentication failed';
-            this.logger.warn(`Authentication failed for strategy ${strategy}: ${errorMessage}, info: ${JSON.stringify(info)}`);
+            this.logger.warn(
+              `Authentication failed for strategy ${strategy}: ${errorMessage}, info: ${JSON.stringify(info)}`,
+            );
             reject(new UnauthorizedException(errorMessage));
             return;
           }
@@ -103,7 +111,11 @@ export class CombinedAuthGuard implements CanActivate {
               callbackCalled = true;
               clearTimeout(timeout);
               this.logger.error(`Middleware error for strategy ${strategy}: ${error.message}`);
-              reject(error instanceof UnauthorizedException ? error : new UnauthorizedException(error.message));
+              reject(
+                error instanceof UnauthorizedException
+                  ? error
+                  : new UnauthorizedException(error.message),
+              );
               return;
             }
 
@@ -115,11 +127,15 @@ export class CombinedAuthGuard implements CanActivate {
               const user = request.user;
               // Проверяем, что user имеет необходимые поля
               if (user.userId || user.apiKeyId) {
-                this.logger.debug(`User set directly in request via ${strategy}: ${JSON.stringify(user)}`);
+                this.logger.debug(
+                  `User set directly in request via ${strategy}: ${JSON.stringify(user)}`,
+                );
                 resolve(true);
                 return;
               } else {
-                this.logger.warn(`User set in request but missing required fields: ${JSON.stringify(user)}`);
+                this.logger.warn(
+                  `User set in request but missing required fields: ${JSON.stringify(user)}`,
+                );
                 // Продолжаем ждать callback или таймаут
               }
             }
@@ -133,7 +149,9 @@ export class CombinedAuthGuard implements CanActivate {
         if (!callbackCalled) {
           callbackCalled = true;
           clearTimeout(timeout);
-          this.logger.error(`Authentication exception for strategy ${strategy}: ${error?.message || 'Unknown error'}`);
+          this.logger.error(
+            `Authentication exception for strategy ${strategy}: ${error?.message || 'Unknown error'}`,
+          );
           reject(
             error instanceof UnauthorizedException
               ? error
@@ -160,7 +178,8 @@ export class CombinedAuthGuard implements CanActivate {
     // Проверяем наличие обоих заголовков одновременно
     // Express нормализует заголовки в нижний регистр, но проверяем оба варианта для надежности
     const authHeader = request.headers.authorization || request.headers['authorization'];
-    const hasAuthorization = authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ');
+    const hasAuthorization =
+      authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ');
 
     // Проверяем API ключ в заголовке (разные варианты регистра) и в query параметре
     const apiKeyHeader =
@@ -196,7 +215,9 @@ export class CombinedAuthGuard implements CanActivate {
           throw new UnauthorizedException('Authentication failed: user ID not found');
         }
 
-        this.logger.debug(`JWT user authenticated: ${user.userId} - ${request.method} ${request.url}`);
+        this.logger.debug(
+          `JWT user authenticated: ${user.userId} - ${request.method} ${request.url}`,
+        );
         // Дополнительная проверка, что user действительно установлен в request
         if (!request.user || !request.user.userId) {
           this.logger.error(
@@ -204,10 +225,14 @@ export class CombinedAuthGuard implements CanActivate {
           );
           throw new UnauthorizedException('Authentication failed: user not found in request');
         }
-        this.logger.debug(`JWT authentication verified - request.user: ${JSON.stringify(request.user)}`);
+        this.logger.debug(
+          `JWT authentication verified - request.user: ${JSON.stringify(request.user)}`,
+        );
         return true;
       } catch (error) {
-        this.logger.error(`JWT authentication failed: ${error.message} - ${request.method} ${request.url}`);
+        this.logger.error(
+          `JWT authentication failed: ${error.message} - ${request.method} ${request.url}`,
+        );
         throw error;
       }
     }
@@ -232,7 +257,9 @@ export class CombinedAuthGuard implements CanActivate {
         );
         return true;
       } catch (error) {
-        this.logger.error(`API Key authentication failed: ${error.message} - ${request.method} ${request.url}`);
+        this.logger.error(
+          `API Key authentication failed: ${error.message} - ${request.method} ${request.url}`,
+        );
         throw error;
       }
     }
