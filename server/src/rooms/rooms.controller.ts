@@ -237,30 +237,87 @@ export class RoomsController {
     @GetApiKey() apiKey?: ApiKey,
   ) {
     // #region agent log
-    this.writeLog({location:'rooms.controller.ts:231',message:'findMyRooms entry',data:{userExists:!!user,apiKeyExists:!!apiKey,userId:user?.userId,apiKeyUserId:apiKey?.userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'});
+    this.writeLog({
+      location: 'rooms.controller.ts:231',
+      message: 'findMyRooms entry',
+      data: {
+        userExists: !!user,
+        apiKeyExists: !!apiKey,
+        userId: user?.userId,
+        apiKeyUserId: apiKey?.userId,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C',
+    });
     // #endregion
     const userId = user?.userId || apiKey?.userId;
     // #region agent log
-    this.writeLog({location:'rooms.controller.ts:234',message:'userId extracted',data:{userId,userIdType:typeof userId,hasUserId:!!userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'});
+    this.writeLog({
+      location: 'rooms.controller.ts:234',
+      message: 'userId extracted',
+      data: { userId, userIdType: typeof userId, hasUserId: !!userId },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'B',
+    });
     // #endregion
     if (!userId) {
       // #region agent log
-      this.writeLog({location:'rooms.controller.ts:236',message:'no userId, returning public rooms',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'});
+      this.writeLog({
+        location: 'rooms.controller.ts:236',
+        message: 'no userId, returning public rooms',
+        data: {},
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'C',
+      });
       // #endregion
       return this.roomsService.findAll(false); // Если не авторизован, возвращаем все публичные комнаты
     }
     // #region agent log
-    this.writeLog({location:'rooms.controller.ts:240',message:'calling findByUserId',data:{userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+    this.writeLog({
+      location: 'rooms.controller.ts:240',
+      message: 'calling findByUserId',
+      data: { userId },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A',
+    });
     // #endregion
     try {
       const result = await this.roomsService.findByUserId(userId);
       // #region agent log
-      this.writeLog({location:'rooms.controller.ts:244',message:'findByUserId success',data:{roomsCount:result?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.controller.ts:244',
+        message: 'findByUserId success',
+        data: { roomsCount: result?.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       return result;
     } catch (error) {
       // #region agent log
-      this.writeLog({location:'rooms.controller.ts:248',message:'findByUserId error',data:{errorMessage:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.controller.ts:248',
+        message: 'findByUserId error',
+        data: {
+          errorMessage: error?.message,
+          errorName: error?.name,
+          errorStack: error?.stack?.substring(0, 500),
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       this.logger.error(`Error in findMyRooms: ${error.message}`, error.stack);
       throw error;

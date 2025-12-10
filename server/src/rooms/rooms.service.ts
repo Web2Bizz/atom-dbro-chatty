@@ -219,11 +219,27 @@ export class RoomsService {
     try {
       this.logger.debug(`Finding rooms for userId: ${userId}`);
       // #region agent log
-      this.writeLog({location:'rooms.service.ts:211',message:'findByUserId entry',data:{userId,userIdType:typeof userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.service.ts:211',
+        message: 'findByUserId entry',
+        data: { userId, userIdType: typeof userId },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       // Получаем комнаты, созданные пользователем, и все публичные комнаты
       // #region agent log
-      this.writeLog({location:'rooms.service.ts:214',message:'before database query',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.service.ts:214',
+        message: 'before database query',
+        data: {},
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       const result = await this.db
         .select()
@@ -231,13 +247,35 @@ export class RoomsService {
         .where(or(eq(rooms.createdBy, userId), eq(rooms.isPrivate, false)))
         .orderBy(asc(rooms.createdAt));
       // #region agent log
-      this.writeLog({location:'rooms.service.ts:219',message:'database query success',data:{resultCount:result?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.service.ts:219',
+        message: 'database query success',
+        data: { resultCount: result?.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       this.logger.debug(`Found ${result.length} rooms for userId: ${userId}`);
       return result;
     } catch (error) {
       // #region agent log
-      this.writeLog({location:'rooms.service.ts:222',message:'database query error',data:{errorMessage:error?.message,errorName:error?.name,errorCode:error?.code,errorCause:error?.cause?.message,errorStack:error?.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      this.writeLog({
+        location: 'rooms.service.ts:222',
+        message: 'database query error',
+        data: {
+          errorMessage: error?.message,
+          errorName: error?.name,
+          errorCode: error?.code,
+          errorCause: error?.cause?.message,
+          errorStack: error?.stack?.substring(0, 500),
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+      });
       // #endregion
       this.logger.error(`Error in findByUserId: ${error.message}`, error.stack);
       throw error;
