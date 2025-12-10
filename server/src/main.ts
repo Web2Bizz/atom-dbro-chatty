@@ -71,6 +71,7 @@ Some endpoints require specific scopes when using API keys:
 See endpoint descriptions for specific scope requirements.`,
     )
     .setVersion('1.0')
+    .addServer('/chatty/api/v1', 'Chatty API (via Gateway)')
     .addBearerAuth(
       {
         type: 'http',
