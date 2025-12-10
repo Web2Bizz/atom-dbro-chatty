@@ -39,7 +39,7 @@ COPY server/pnpm-lock.yaml ./
 RUN pnpm install
 
 # Копирование исходников и конфигурации
-COPY server/tsconfig*.json ./
+COPY server/tsconfig.prod.json ./tsconfig.json
 COPY server/nest-cli.json ./
 COPY server/drizzle.config.ts ./
 COPY build.sh ./
