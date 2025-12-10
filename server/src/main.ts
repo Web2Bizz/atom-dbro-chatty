@@ -12,36 +12,30 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Enable CORS for Socket.io and API - разрешить все запросы
   app.enableCors({
-    origin: '*', // Разрешить все источники
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['*'], // Разрешить все заголовки
-    exposedHeaders: ['*'], // Разрешить все заголовки в ответе
+    allowedHeaders: ['*'],
+    exposedHeaders: ['*'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
 
-  // API Versioning
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('chatty/api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
   });
 
-  // Socket.io adapter
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  // Global Authentication Guard (JWT + API Key)
   const combinedAuthGuard = app.get(CombinedAuthGuard);
   app.useGlobalGuards(combinedAuthGuard);
 
-  // Global Scope Guard (проверка прав доступа для API ключей)
   const scopeGuard = app.get(ScopeGuard);
   app.useGlobalGuards(scopeGuard);
 
-  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Chatty API')
     .setDescription(
