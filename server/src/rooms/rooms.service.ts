@@ -3,10 +3,18 @@ import { DATABASE_CONNECTION, Database } from '../database/database.module';
 import { rooms, Room, NewRoom } from '../database/schema/rooms';
 import { messages, Message, NewMessage } from '../database/schema/messages';
 import { eq, or, desc, asc, and, sql } from 'drizzle-orm';
+import { appendFileSync } from 'fs';
 
 @Injectable()
 export class RoomsService {
   private readonly logger = new Logger(RoomsService.name);
+  private readonly logPath = 'e:\\Others\\web_apps\\atom-dbro-backend\\.cursor\\debug.log';
+
+  private writeLog(data: any) {
+    try {
+      appendFileSync(this.logPath, JSON.stringify(data) + '\n', 'utf8');
+    } catch (e) {}
+  }
 
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -210,15 +218,27 @@ export class RoomsService {
   async findByUserId(userId: string): Promise<Room[]> {
     try {
       this.logger.debug(`Finding rooms for userId: ${userId}`);
+      // #region agent log
+      this.writeLog({location:'rooms.service.ts:211',message:'findByUserId entry',data:{userId,userIdType:typeof userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      // #endregion
       // Получаем комнаты, созданные пользователем, и все публичные комнаты
+      // #region agent log
+      this.writeLog({location:'rooms.service.ts:214',message:'before database query',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      // #endregion
       const result = await this.db
         .select()
         .from(rooms)
         .where(or(eq(rooms.createdBy, userId), eq(rooms.isPrivate, false)))
         .orderBy(asc(rooms.createdAt));
+      // #region agent log
+      this.writeLog({location:'rooms.service.ts:219',message:'database query success',data:{resultCount:result?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      // #endregion
       this.logger.debug(`Found ${result.length} rooms for userId: ${userId}`);
       return result;
     } catch (error) {
+      // #region agent log
+      this.writeLog({location:'rooms.service.ts:222',message:'database query error',data:{errorMessage:error?.message,errorName:error?.name,errorCode:error?.code,errorCause:error?.cause?.message,errorStack:error?.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'});
+      // #endregion
       this.logger.error(`Error in findByUserId: ${error.message}`, error.stack);
       throw error;
     }
