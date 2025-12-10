@@ -22,7 +22,7 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('chatty/api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
