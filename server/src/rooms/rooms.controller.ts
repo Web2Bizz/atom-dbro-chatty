@@ -188,8 +188,7 @@ export class RoomsController {
       if (apiKey) {
         const userScopes: string[] = req?.user?.scopes || [];
         const hasAllChatsAccess =
-          hasScope(userScopes, Scope.ALLOW_ALL) ||
-          hasScope(userScopes, Scope.ALLOW_ALL_CHATS);
+          hasScope(userScopes, Scope.ALLOW_ALL) || hasScope(userScopes, Scope.ALLOW_ALL_CHATS);
 
         if (hasAllChatsAccess) {
           // Полный доступ ко всем комнатам
