@@ -204,7 +204,9 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Создаем пользователя
-    this.logger.log(`Creating user with username: ${trimmedUsername}${trimmedEmail ? `, email: ${trimmedEmail}` : ''}`);
+    this.logger.log(
+      `Creating user with username: ${trimmedUsername}${trimmedEmail ? `, email: ${trimmedEmail}` : ''}`,
+    );
 
     try {
       // Явно генерируем UUID для избежания проблем с расширениями PostgreSQL
