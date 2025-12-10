@@ -13,7 +13,7 @@ export const apiKeys = pgTable('api_keys', {
   ipAddress: varchar('ip_address', { length: 45 }),
   userAgent: text('user_agent'),
   scopes: text('scopes'), // JSON массив разрешений
-  permissions: text('permissions'), // JSON массив разрешений (permissions)
+  // permissions: text('permissions'), // Убрано - поле не существует в таблице БД
 });
 
 export type ApiKey = typeof apiKeys.$inferSelect;

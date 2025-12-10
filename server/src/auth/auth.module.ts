@@ -6,8 +6,6 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyJwtStrategy } from './strategies/api-key-jwt.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { ApiKeyJwtGuard } from './guards/api-key-jwt.guard';
 import { CombinedAuthGuard } from './guards/combined-auth.guard';
 import { ScopeGuard } from './guards/scope.guard';
 
@@ -30,8 +28,6 @@ import { ScopeGuard } from './guards/scope.guard';
     AuthService,
     JwtStrategy,
     ApiKeyJwtStrategy,
-    JwtAuthGuard,
-    ApiKeyJwtGuard,
     CombinedAuthGuard,
     ScopeGuard,
   ],
