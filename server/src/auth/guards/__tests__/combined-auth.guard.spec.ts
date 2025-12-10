@@ -91,7 +91,11 @@ describe('CombinedAuthGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(passport.authenticate).toHaveBeenCalledWith('jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'jwt',
+        { session: false },
+        expect.any(Function),
+      );
       expect(mockRequest.user).toEqual(mockUser);
     });
 
@@ -108,7 +112,11 @@ describe('CombinedAuthGuard', () => {
       );
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
-      expect(passport.authenticate).toHaveBeenCalledWith('jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'jwt',
+        { session: false },
+        expect.any(Function),
+      );
     });
 
     it('should throw UnauthorizedException if request.user is not set after authentication', async () => {
@@ -125,7 +133,11 @@ describe('CombinedAuthGuard', () => {
       );
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
-      expect(passport.authenticate).toHaveBeenCalledWith('jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'jwt',
+        { session: false },
+        expect.any(Function),
+      );
     });
 
     it('should throw UnauthorizedException if user.userId is missing', async () => {
@@ -168,7 +180,11 @@ describe('CombinedAuthGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(passport.authenticate).toHaveBeenCalledWith('api-key-jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'api-key-jwt',
+        { session: false },
+        expect.any(Function),
+      );
       expect(mockRequest.user).toEqual(mockUser);
     });
 
@@ -194,7 +210,11 @@ describe('CombinedAuthGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(passport.authenticate).toHaveBeenCalledWith('api-key-jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'api-key-jwt',
+        { session: false },
+        expect.any(Function),
+      );
       expect(mockRequest.user).toEqual(mockUser);
     });
 
@@ -219,7 +239,11 @@ describe('CombinedAuthGuard', () => {
       const result = await guard.canActivate(mockContext);
 
       expect(result).toBe(true);
-      expect(passport.authenticate).toHaveBeenCalledWith('api-key-jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'api-key-jwt',
+        { session: false },
+        expect.any(Function),
+      );
     });
 
     it('should throw UnauthorizedException for invalid API key', async () => {
@@ -235,7 +259,11 @@ describe('CombinedAuthGuard', () => {
       );
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
-      expect(passport.authenticate).toHaveBeenCalledWith('api-key-jwt', { session: false }, expect.any(Function));
+      expect(passport.authenticate).toHaveBeenCalledWith(
+        'api-key-jwt',
+        { session: false },
+        expect.any(Function),
+      );
     });
 
     it('should throw UnauthorizedException if request.user is not set after API key authentication', async () => {
@@ -344,4 +372,3 @@ describe('CombinedAuthGuard', () => {
     });
   });
 });
-

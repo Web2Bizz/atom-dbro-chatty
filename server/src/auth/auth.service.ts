@@ -306,7 +306,9 @@ export class AuthService {
       ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
       : null;
 
-    this.logger.debug(`[generateApiKey] Calculated expiresAt: ${expiresAt ? expiresAt.toISOString() : 'null'}`);
+    this.logger.debug(
+      `[generateApiKey] Calculated expiresAt: ${expiresAt ? expiresAt.toISOString() : 'null'}`,
+    );
 
     // Сначала создаём временную запись для получения ID
     // Используем временный ключ, который потом заменим
@@ -333,7 +335,9 @@ export class AuthService {
 
     // Дополнительная проверка типа expiresAt
     if (insertData.expiresAt && !(insertData.expiresAt instanceof Date)) {
-      this.logger.error(`[generateApiKey] expiresAt is not a Date object: ${typeof insertData.expiresAt}, value: ${insertData.expiresAt}`);
+      this.logger.error(
+        `[generateApiKey] expiresAt is not a Date object: ${typeof insertData.expiresAt}, value: ${insertData.expiresAt}`,
+      );
       throw new Error('expiresAt must be a Date object or null');
     }
 
@@ -365,16 +369,15 @@ export class AuthService {
       this.logger.warn(`[generateApiKey] Name too long: ${insertData.name.length} chars (max 255)`);
     }
     if (insertData.ipAddress && insertData.ipAddress.length > 45) {
-      this.logger.warn(`[generateApiKey] IP address too long: ${insertData.ipAddress.length} chars (max 45)`);
+      this.logger.warn(
+        `[generateApiKey] IP address too long: ${insertData.ipAddress.length} chars (max 45)`,
+      );
     }
 
     let apiKey: ApiKey;
     try {
       this.logger.debug(`[generateApiKey] Executing database insert...`);
-      const [insertedApiKey] = await this.db
-        .insert(apiKeys)
-        .values(insertData)
-        .returning();
+      const [insertedApiKey] = await this.db.insert(apiKeys).values(insertData).returning();
 
       apiKey = insertedApiKey;
 
@@ -401,7 +404,10 @@ export class AuthService {
       this.logger.error(`[generateApiKey] Error table: ${error.table || 'N/A'}`);
       this.logger.error(`[generateApiKey] Error column: ${error.column || 'N/A'}`);
       this.logger.error(`[generateApiKey] Error dataType: ${error.dataType || 'N/A'}`);
-      this.logger.error(`[generateApiKey] Full error object:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      this.logger.error(
+        `[generateApiKey] Full error object:`,
+        JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      );
       this.logger.error(`[generateApiKey] Failed insert data (raw):`, {
         key: insertData.key,
         name: insertData.name,
