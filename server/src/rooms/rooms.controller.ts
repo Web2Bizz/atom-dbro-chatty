@@ -136,15 +136,17 @@ export class RoomsController {
     @GetApiKey() apiKey?: ApiKey,
   ) {
     try {
-      this.logger.debug(`GET /rooms - user: ${user?.userId || 'none'}, apiKey: ${apiKey?.id || 'none'}`);
+      this.logger.debug(
+        `GET /rooms - user: ${user?.userId || 'none'}, apiKey: ${apiKey?.id || 'none'}`,
+      );
       // Если пользователь авторизован, показываем все комнаты включая приватные
       // Иначе только публичные
       const includePrivate = !!(user?.userId || apiKey?.userId);
       this.logger.debug(`includePrivate: ${includePrivate}`);
-      
+
       const rooms = await this.roomsService.findAll(includePrivate);
       this.logger.debug(`Returning ${rooms.length} rooms`);
-      
+
       return rooms;
     } catch (error) {
       this.logger.error(`Error in findAll: ${error.message}`, error.stack);

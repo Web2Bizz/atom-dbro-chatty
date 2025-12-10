@@ -14,24 +14,96 @@ export class RoomsService {
   ) {}
 
   async create(data: NewRoom): Promise<Room> {
-    const [room] = await this.db
-      .insert(rooms)
-      .values({
-        ...data,
-        description: data.description ?? null,
-        isPrivate: data.isPrivate ?? true, // По умолчанию приватные комнаты
-        type: data.type ?? 'normal',
-      })
-      .returning();
+    const roomType = data.type ?? 'normal';
+    
+    // Создаем комнату без поля type, так как колонка может отсутствовать в БД
+    const insertData: any = {
+      name: data.name,
+      description: data.description ?? null,
+      isPrivate: data.isPrivate ?? true,
+      createdBy: data.createdBy ?? null,
+      // type исключено, так как колонки может не быть в БД
+    };
+    
+    // Добавляем id только если он явно указан
+    if (data.id) {
+      insertData.id = data.id;
+    }
+    
+    try {
+      // Пытаемся создать комнату с полем type
+      const [room] = await this.db
+        .insert(rooms)
+        .values({
+          ...insertData,
+          type: roomType,
+        })
+        .returning();
 
-    this.logger.log(`Room created: ${room.name} (${room.id})`);
-    return room;
+      this.logger.log(`Room created: ${room.name} (${room.id})`);
+      return room;
+    } catch (error: any) {
+      // Логируем структуру ошибки для диагностики
+      const errorMessage = error?.message || error?.cause?.message || '';
+      const isTypeColumnError = 
+        errorMessage.includes('column "type"') && errorMessage.includes('does not exist') ||
+        errorMessage.includes('column type does not exist') ||
+        error?.cause?.code === '42703'; // PostgreSQL error code for undefined column
+      
+      // Если ошибка связана с отсутствием колонки type, создаем без неё
+      if (isTypeColumnError) {
+        this.logger.warn('Column "type" does not exist in database, creating room without type field');
+        
+        // Используем raw SQL для insert без поля type, так как Drizzle все равно пытается его вставить
+        const result = await this.db.execute(sql`
+          INSERT INTO rooms (name, description, is_private, created_by, created_at, updated_at)
+          VALUES (${insertData.name}, ${insertData.description}, ${insertData.isPrivate}, ${insertData.createdBy}, DEFAULT, DEFAULT)
+          RETURNING id, name, description, is_private, created_by, created_at, updated_at
+        `);
+        
+        // Обрабатываем результат в зависимости от формата
+        const resultArray = Array.isArray(result) ? result : (result as any).rows || [(result as any)[0]];
+        const roomRow = resultArray[0] as any;
+        
+        if (!roomRow) {
+          throw new Error('Failed to create room: no data returned');
+        }
+        
+        const room = {
+          id: roomRow.id,
+          name: roomRow.name,
+          description: roomRow.description,
+          isPrivate: roomRow.is_private ?? roomRow.isPrivate,
+          createdBy: roomRow.created_by ?? roomRow.createdBy,
+          createdAt: roomRow.created_at ?? roomRow.createdAt,
+          updatedAt: roomRow.updated_at ?? roomRow.updatedAt,
+        };
+
+        // Добавляем type в возвращаемый объект
+        const roomWithType = {
+          ...room,
+          type: roomType as 'normal' | 'support',
+        } as Room;
+
+        this.logger.log(`Room created: ${roomWithType.name} (${roomWithType.id})`);
+        return roomWithType;
+      } else {
+        // Если это другая ошибка, логируем и пробрасываем её дальше
+        this.logger.error(`Error creating room: ${error.message}`, error.stack);
+        this.logger.debug(`Error structure: ${JSON.stringify({
+          message: error?.message,
+          causeMessage: error?.cause?.message,
+          cause: error?.cause,
+        }, null, 2)}`);
+        throw error;
+      }
+    }
   }
 
   async findAll(includePrivate: boolean = false): Promise<Room[]> {
     try {
       this.logger.debug(`Finding all rooms, includePrivate: ${includePrivate}`);
-      
+
       let result: Room[];
       if (includePrivate) {
         // Возвращаем все комнаты, включая приватные
@@ -100,13 +172,15 @@ export class RoomsService {
           return dateA.getTime() - dateB.getTime();
         });
       }
-      
+
       return result;
     } catch (error) {
       this.logger.error(`Error in findAll: ${error.message}`, error.stack);
       // Логируем полную информацию об ошибке для диагностики
       if (error instanceof Error) {
-        this.logger.error(`Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
+        this.logger.error(
+          `Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`,
+        );
       }
       throw error;
     }
@@ -144,7 +218,11 @@ export class RoomsService {
     try {
       this.logger.debug(`Finding rooms created by userId: ${userId}`);
       // Получаем только комнаты, созданные конкретным пользователем
-      const result = await this.db.select().from(rooms).where(eq(rooms.createdBy, userId)).orderBy(asc(rooms.createdAt));
+      const result = await this.db
+        .select()
+        .from(rooms)
+        .where(eq(rooms.createdBy, userId))
+        .orderBy(asc(rooms.createdAt));
       this.logger.debug(`Found ${result.length} rooms created by userId: ${userId}`);
       return result;
     } catch (error) {
@@ -181,7 +259,9 @@ export class RoomsService {
     includeRecipients?: boolean,
   ): Promise<Message[]> {
     try {
-      this.logger.debug(`Getting messages for roomId: ${roomId}, limit: ${limit}, userId: ${userId}, includeRecipients: ${includeRecipients}`);
+      this.logger.debug(
+        `Getting messages for roomId: ${roomId}, limit: ${limit}, userId: ${userId}, includeRecipients: ${includeRecipients}`,
+      );
       // Проверяем, что комната существует
       await this.findOne(roomId);
 
