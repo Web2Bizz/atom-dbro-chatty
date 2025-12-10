@@ -11,6 +11,7 @@ import {
   Inject,
   NotFoundException,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -49,6 +50,8 @@ const CreateMessageSchema = z.object({
 @ApiTags('rooms')
 @Controller('rooms')
 export class RoomsController {
+  private readonly logger = new Logger(RoomsController.name);
+
   constructor(
     private readonly roomsService: RoomsService,
     @Inject(forwardRef(() => SocketGateway))
@@ -132,10 +135,21 @@ export class RoomsController {
     @GetUser() user?: { userId: string; username?: string },
     @GetApiKey() apiKey?: ApiKey,
   ) {
-    // Если пользователь авторизован, показываем все комнаты включая приватные
-    // Иначе только публичные
-    const includePrivate = !!(user?.userId || apiKey?.userId);
-    return this.roomsService.findAll(includePrivate);
+    try {
+      this.logger.debug(`GET /rooms - user: ${user?.userId || 'none'}, apiKey: ${apiKey?.id || 'none'}`);
+      // Если пользователь авторизован, показываем все комнаты включая приватные
+      // Иначе только публичные
+      const includePrivate = !!(user?.userId || apiKey?.userId);
+      this.logger.debug(`includePrivate: ${includePrivate}`);
+      
+      const rooms = await this.roomsService.findAll(includePrivate);
+      this.logger.debug(`Returning ${rooms.length} rooms`);
+      
+      return rooms;
+    } catch (error) {
+      this.logger.error(`Error in findAll: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   @Get('my')
